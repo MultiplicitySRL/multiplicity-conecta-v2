@@ -1,0 +1,78 @@
+INSTRUCCIONES: Este archivo controla TODO el contenido del portal de recursos
+
+CÓMO USAR:
+1. MOSTRAR: Cambia a NO para ocultar un recurso
+2. ORDEN: Cambia el número para reordenar (más bajo aparece primero)
+3. SECCIÓN: Agrupa recursos (usa el mismo nombre para agrupar)
+4. PASO: Solo para pasos 1-4 (deja vacío para otras secciones)
+5. SUBSECCIÓN: Opcional - agrupa dentro de una sección
+6. TÍTULO: El texto principal que ve el usuario
+7. DESCRIPCIÓN: Texto adicional (solo para secciones principales)
+8. TEXTO BOTÓN: Qué dice el botón (ej: Ver Video, Descargar)
+9. TIPO: Video, PDF, Excel, PowerPoint, Link, o Sección
+10. URL VIDEO: Solo el ID de YouTube (ej: ABC123)
+11. URL ARCHIVO: Ruta del archivo o link completo
+12. IMAGEN: Ruta de la imagen de portada
+13. NOTAS: Para tu uso interno (no se muestra en el portal)
+
+PARA AGREGAR NUEVO RECURSO:
+1. Copia una fila similar
+2. Cambia el ORDEN a un número nuevo
+3. Completa los campos
+4. Guarda
+
+PARA ELIMINAR:
+Cambia MOSTRAR a NO (no borres la fila)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+MOSTRAR,ORDEN,SECCIÓN,PASO,SUBSECCIÓN,TÍTULO,DESCRIPCIÓN,TEXTO BOTÓN,TIPO,URL VIDEO (ID YouTube),URL ARCHIVO,IMAGEN,NOTAS
+SÍ,1,🎯 Introducción,,,Caso de uso multiplicity,Una orientación sobre los contenidos y tutoriales que te permitirán un uso efectivo de la herramienta de evaluación.,,Sección,,,,Esta es la sección hero principal. Título y descripción se muestran grandes.
+SÍ,2,🎯 Introducción,,,Tour general de la plataforma,,Ver Video,Video,pfDyegdtG2E,,,Video de introducción principal
+SÍ,10,📝 Paso 1,1,,Creación de los perfiles,,,Sección,,,,Título del Paso 1. Aparece con número grande.
+SÍ,11,📝 Paso 1,1,,Guía para definir perfiles,,Descargar Guía,PDF,,/documentos/Guia-Definir-Perfiles.pdf,/clientes/guia de perfiles.jpeg,
+SÍ,12,📝 Paso 1,1,,Perfiles predeterminados OIT,,Descargar Guía,PDF,,/documentos/Perfiles-OIT.pdf,/clientes/perfiles oit.jpeg,Perfiles estándar de la OIT
+SÍ,13,📝 Paso 1,1,,Creación de Perfiles,,Ver Tutorial,Video,SPbDhWks5k0,,/profile-comparison-dashboard.jpg,
+SÍ,20,📝 Paso 2,2,,Creación de Procesos de Evaluación,,,Sección,,,,
+SÍ,21,📝 Paso 2,2,,Gestión de Usuarios,,Ver Tutorial,Video,lTX96_VH7nY,,/clean-user-management-dashboard.jpg,
+SÍ,22,📝 Paso 2,2,,Comparativo,,Ver Tutorial,Video,pVzVMefVTJU,,/profile-comparison-dashboard.jpg,
+SÍ,23,📝 Paso 2,2,,Índice y Tendencias,,Ver Tutorial,Video,dQw4w9WgXcQ,,/evaluation-workflow-builder.jpg,⚠️ PENDIENTE: Reemplazar ID de YouTube real
+SÍ,24,📝 Paso 2,2,,Creación de Procesos de Evaluación y Configuración de Pruebas,,Ver Tutorial,Video,tO1sRoO8Arc,,/evaluation-workflow-builder.jpg,
+SÍ,25,📝 Paso 2,2,,Gestión de Participantes,,Ver Tutorial,Video,oTV_B7H1kD8,,/participant-management-interface.jpg,
+SÍ,26,📝 Paso 2,2,,Duplicar Procesos,,Ver Tutorial,Video,WGBNbEdzGlI,,/process-duplication-workflow.jpg,
+SÍ,30,📝 Paso 3,3,,Envío de Invitaciones a candidatos,,,Sección,,,,
+SÍ,31,📝 Paso 3,3,,Envío de Invitaciones por Correo Electrónico,,Ver Tutorial,Video,dQw4w9WgXcQ,,/email-invitation-workflow-dashboard.jpg,⚠️ PENDIENTE: Reemplazar ID de YouTube real
+SÍ,32,📝 Paso 3,3,,Envío de Invitaciones por Credenciales de Acceso,,Ver Tutorial,Video,dQw4w9WgXcQ,,/credential-invitation-interface.jpg,⚠️ PENDIENTE: Reemplazar ID de YouTube real
+SÍ,33,📝 Paso 3,3,,Estado de las Pruebas y Reinicio,,Ver Tutorial,Video,dQw4w9WgXcQ,,/evaluation-progress-status-dashboard.jpg,⚠️ PENDIENTE: Reemplazar ID de YouTube real
+SÍ,40,📝 Paso 4,4,,Generación de Reportes,,,Sección,,,,
+SÍ,41,📝 Paso 4,4,,Descarga Reportes Individuales,,Descargar Guía,PDF,,/documentos/tutorial-reportes-individuales.pdf,/individual-assessment-report-dashboard.jpg,
+SÍ,42,📝 Paso 4,4,,Descarga Reportes Grupales,,Descargar Guía,PDF,,/documentos/tutorial-reportes-grupales.pdf,/group-performance-analytics-dashboard.jpg,
+SÍ,43,📝 Paso 4,4,,Video de Utilidad de los Reportes,,Ver Video,Video,dQw4w9WgXcQ,,/individual-assessment-report-dashboard.jpg,⚠️ PENDIENTE: Reemplazar ID de YouTube real
+SÍ,50,📊 Interpretación de Resultados,,,Interpretación de Resultados,Guías y videos para interpretar los resultados de las evaluaciones de manera efectiva.,,Sección,,,,
+SÍ,51,📊 Interpretación de Resultados,,,Guía de Interpretación Individual de Resultados Empresa y Candidato,,Descargar Guía,PDF,,/documentos/tutorial-guia-interpretacion-individual.pdf,/individual-assessment-report-dashboard.jpg,
+SÍ,52,📊 Interpretación de Resultados,,,Guía de Interpretación de Resultados Grupales Empresa,,Descargar Guía,PDF,,/documentos/tutorial-guia-interpretacion-grupal.pdf,/group-performance-analytics-dashboard.jpg,
+SÍ,60,📅 Agendar Cita,,,¿Deseas que te acompañemos en algunos de estos pasos?,Agenda una cita con nosotros,Agendar Cita,Link,,https://cal.com/carlos-santos/30min,,CTA para agendar reunión
+SÍ,70,📚 Manuales,,,Manuales,,,Sección,,,,
+SÍ,71,📚 Manuales,,,Requerimientos Técnicos,,Ver Documento,PDF,,/documentos/Requerimientos Tecnicos Plataforma Multiplicity.pdf,/images/Requerimientos Tecnico de la plataforma.png,
+SÍ,72,📚 Manuales,,,Manual Funcional de la Plataforma,,Ver Documento,PDF,,/documentos/Manual Funcional de la Plataforma.pdf,/images/Manual Funcional de la plataforma.png,
+SÍ,73,📚 Manuales,,Orientaciones para la aplicación de los Test,Recomendaciones antes de completar Multiplicity - Participante Básico,,Ver Documento,PDF,,/documentos/Recomendaciones antes de completar Multiplicity - Participante Basico.pdf,/clientes/2.png,
+SÍ,74,📚 Manuales,,Orientaciones para la aplicación de los Test,Aplicación Presencial de Facilitadores – Proceso Básico,,Ver Documento,PDF,,/documentos/Aplicacion Presencial de Facilitadores - Proceso Basico.pdf,/clientes/3.png,
+SÍ,75,📚 Manuales,,Orientaciones para la aplicación de los Test,Recomendaciones antes de completar Multiplicity – Participante Plus,,Ver Documento,PDF,,/documentos/Recomendaciones antes de completar Multiplicity - Participante Plus.pdf,/clientes/4.png,
+SÍ,76,📚 Manuales,,Orientaciones para la aplicación de los Test,Tutorial Aplicación Presencial de Facilitadores – Proceso Plus,,Ver Documento,PDF,,/documentos/Tutorial Aplicacion Presencial de Facilitadores - Proceso Plus.pdf,/clientes/5.png,
+SÍ,80,🧠 Bases Conceptuales,,,Nuestras bases conceptuales,Fundamentos teóricos que sustentan las evaluaciones y metodologías aplicadas en la plataforma.,,Sección,,,,
+SÍ,81,🧠 Bases Conceptuales,,,Diccionario de Comportamientos,,Ver Documento,PDF,,/documentos/Diccionario de Comportamientos.pdf,/nuevo-clientes/Diccionario de Comportamientos portada.png,
+SÍ,82,🧠 Bases Conceptuales,,,Competencias,,Ver Documento,PDF,,/documentos/Competencias.pdf,/clientes/Diccionario de Competencias Multiplicity 1.png,
+SÍ,83,🧠 Bases Conceptuales,,,Pensamiento Analítico y Sistémico,,Ver Documento,PDF,,/documentos/Pensamiento Analitico y Sistemico.pdf,/clientes/Diccionario de pensamiento anaco y sistémico - Multiplicity 1.png,
+SÍ,84,🧠 Bases Conceptuales,,,Motivadores,,Ver Documento,PDF,,/documentos/Motivadores.pdf,/clientes/Diccionario-de-motivadores-Multiplicity 1.png,
+SÍ,85,🧠 Bases Conceptuales,,,Fichas Técnicas de las Pruebas,,Ver Documento,PDF,,/documentos/Fichas Tecnicas de las Pruebas.pdf,/clientes/6.png,
+SÍ,90,💼 Valoración Integral,,,Apoyándote En La Valoración integral,Herramientas y guías para maximizar el valor de tus procesos de evaluación y desarrollo de talento.,,Sección,,,,
+SÍ,91,💼 Valoración Integral,,La Evaluación Contraste: La Entrevista,Guía de Entrevista por Competencias,,Ver Documento,PDF,,/documentos/Guia de Entrevista por Competencias.pdf,/clientes/6.png,
+SÍ,92,💼 Valoración Integral,,La Evaluación Contraste: La Entrevista,Metodología de Aplicación de la Entrevista,,Ver Documento,Excel,,/documentos/Metodologia de Aplicacion.xlsx,/clientes/8.png,
+SÍ,93,💼 Valoración Integral,,Compartiendo los Resultados,Guía de Retroalimentación por Competencias,,Ver Documento,PDF,,/documentos/Guia de Retroalimentacion por Competencias.pdf,/clientes/10.png,
+SÍ,94,💼 Valoración Integral,,Convirtiendo los Datos de Evaluación en Entendimiento,Ideas para un Plan de Sucesión,,Ver Documento,PDF,,/documentos/Ideas para un Plan de Sucesion.pdf,/clientes/11.png,
+SÍ,95,💼 Valoración Integral,,El Desarrollo de Competencias,Pautas para el autodesarrollo por Competencias – Evaluados,,Ver Documento,PDF,,/documentos/Pautas para el autodesarrollo por Competencias.pdf,/clientes/12.png,
+SÍ,96,💼 Valoración Integral,,El Desarrollo de Competencias,Plan de Acción por Competencias/Evaluados,,Ver Documento,PDF,,/documentos/Plan de Accion por Competencias.pdf,/clientes/13.png,
+SÍ,97,💼 Valoración Integral,,El Desarrollo de Competencias,PPT Taller de Autodesarrollo por Competencias/Evaluados,,Ver Documento,PowerPoint,,/documentos/PPT Taller de Autodesarrollo por Competencias.pptx,/clientes/2.png,
+SÍ,98,💼 Valoración Integral,,El Desarrollo de Competencias,Manual de Autodesarrollo por Competencias,,Ver Documento,PDF,,/documentos/Manual de Autodesarrollo por Competencias.pdf,/clientes/9.png,
+SÍ,100,🔬 Investigaciones,,,Estudios e Investigaciones,"Descubre hallazgos y tendencias en gestión de talento, competencias profesionales y desarrollo organizacional.",,Sección,,,,
+SÍ,101,🔬 Investigaciones,,,Trends by Multiplicity,,Ver Documento,PDF,,/documentos/Trends by Multiplicity.pdf,/clientes/Trends.png,
