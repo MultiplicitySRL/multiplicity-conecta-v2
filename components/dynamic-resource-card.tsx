@@ -35,17 +35,21 @@ export function DynamicResourceCard({ resource, onComplete }: DynamicResourceCar
     }
   }
 
-  // Determinar color del footer según el tipo
+  // Determinar color del footer según el campo color del CSV
   const getFooterColor = () => {
-    if (resource.seccion.includes("Interpretación")) return "bg-[#E11383]"
-    if (resource.paso === "1") return "bg-[#E11383]"
+    const colorValue = resource.color?.toLowerCase().trim()
+    if (colorValue === "rosa") return "bg-[#E11383]"
+    if (colorValue === "azul") return "bg-navy"
+    // Default: azul (navy)
     return "bg-navy"
   }
 
   const getButtonColor = () => {
-    if (resource.seccion.includes("Interpretación") || resource.paso === "1") {
+    const colorValue = resource.color?.toLowerCase().trim()
+    if (colorValue === "rosa") {
       return "bg-white text-[#E11383] hover:bg-gray-100"
     }
+    // Default o azul: texto navy
     return "bg-white text-navy hover:bg-gray-100"
   }
 
@@ -82,7 +86,10 @@ export function DynamicResourceCard({ resource, onComplete }: DynamicResourceCar
           crossOrigin={isExternalImage ? "anonymous" : undefined}
         />
         <div className={`absolute bottom-0 left-0 right-0 ${getFooterColor()} text-white p-4`}>
-          <h4 className="text-base font-bold leading-tight line-clamp-2 mb-3">{resource.titulo}</h4>
+          <h4 className="text-base font-bold leading-tight line-clamp-2 mb-1">{resource.titulo}</h4>
+          {resource.descripcion && (
+            <p className="text-sm text-white/80 leading-tight line-clamp-1 mb-2">{resource.descripcion}</p>
+          )}
           <div className="flex flex-col sm:flex-row gap-2">
             {hasVideo && (
               <button

@@ -73,6 +73,8 @@ export default function ClientesPageDynamic() {
   const paso3Section = res.find((r) => r.paso === "3" && isSection(r))
   const paso4Resources = res.filter((r) => r.paso === "4" && !isSection(r))
   const paso4Section = res.find((r) => r.paso === "4" && isSection(r))
+  const paso5Resources = res.filter((r) => r.paso === "5" && !isSection(r))
+  const paso5Section = res.find((r) => r.paso === "5" && isSection(r))
   const interpretacionResources = res.filter((r) => r.seccion.includes("Interpretación") && !isSection(r))
   const interpretacionSection = res.find((r) => r.seccion.includes("Interpretación") && isSection(r))
   const agendarCita = res.find((r) => r.seccion.includes("Agendar"))
@@ -120,6 +122,13 @@ export default function ClientesPageDynamic() {
         id: "paso-4",
         title: paso4Section.titulo,
         subsections: paso4Resources.map((r) => ({ id: `resource-${r.orden}`, title: r.titulo })),
+      })
+    }
+    if (paso5Section && paso5Resources.length > 0) {
+      useCaseSubs.push({
+        id: "paso-5",
+        title: paso5Section.titulo,
+        subsections: paso5Resources.map((r) => ({ id: `resource-${r.orden}`, title: r.titulo })),
       })
     }
     if (introSection || useCaseSubs.length > 0) {
@@ -220,6 +229,8 @@ export default function ClientesPageDynamic() {
     paso3Resources,
     paso4Section,
     paso4Resources,
+    paso5Section,
+    paso5Resources,
     interpretacionSection,
     interpretacionResources,
     agendarCita,
@@ -326,6 +337,9 @@ export default function ClientesPageDynamic() {
                         <h3 className="text-2xl font-bold" style={{ color: "#E11383" }}>
                           {tourGeneral.titulo}
                         </h3>
+                        {tourGeneral.descripcion && (
+                          <p className="text-base text-gray-600 mt-2">{tourGeneral.descripcion}</p>
+                        )}
                       </div>
 
                       <div className="relative aspect-[16/8] bg-black">
@@ -352,6 +366,7 @@ export default function ClientesPageDynamic() {
                   <DynamicStepSection
                     stepNumber="1"
                     stepTitle={paso1Section.titulo}
+                    stepDescription={paso1Section.descripcion}
                     resources={paso1Resources}
                     onResourceComplete={handleResourceComplete}
                   />
@@ -364,6 +379,7 @@ export default function ClientesPageDynamic() {
                   <DynamicStepSection
                     stepNumber="2"
                     stepTitle={paso2Section.titulo}
+                    stepDescription={paso2Section.descripcion}
                     resources={paso2Resources}
                     onResourceComplete={handleResourceComplete}
                   />
@@ -376,6 +392,7 @@ export default function ClientesPageDynamic() {
                   <DynamicStepSection
                     stepNumber="3"
                     stepTitle={paso3Section.titulo}
+                    stepDescription={paso3Section.descripcion}
                     resources={paso3Resources}
                     onResourceComplete={handleResourceComplete}
                   />
@@ -388,7 +405,21 @@ export default function ClientesPageDynamic() {
                   <DynamicStepSection
                     stepNumber="4"
                     stepTitle={paso4Section.titulo}
+                    stepDescription={paso4Section.descripcion}
                     resources={paso4Resources}
+                    onResourceComplete={handleResourceComplete}
+                  />
+                </div>
+              )}
+
+              {/* Paso 5 */}
+              {paso5Resources.length > 0 && paso5Section && (
+                <div id="paso-5">
+                  <DynamicStepSection
+                    stepNumber="5"
+                    stepTitle={paso5Section.titulo}
+                    stepDescription={paso5Section.descripcion}
+                    resources={paso5Resources}
                     onResourceComplete={handleResourceComplete}
                   />
                 </div>

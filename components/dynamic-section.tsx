@@ -54,6 +54,15 @@ export function DynamicSection({ title, subtitle, resources, backgroundColor = "
     return `${baseUrl}${separator}v=${resource.orden}`
   }
 
+  // Helper para obtener el color del footer según el campo color del CSV
+  const getFooterColor = (resource: ResourceV3) => {
+    const colorValue = resource.color?.toLowerCase().trim()
+    if (colorValue === "rosa") return "bg-[#E11383]"
+    if (colorValue === "azul") return "bg-navy"
+    // Default: azul (navy)
+    return "bg-navy"
+  }
+
   return (
     <section className="py-16 px-4 md:px-8 lg:px-16 bg-background">
       <div className="max-w-[1120px] mx-auto">
@@ -113,7 +122,7 @@ export function DynamicSection({ title, subtitle, resources, backgroundColor = "
                           crossOrigin={block.large.imagen?.startsWith("http") ? "anonymous" : undefined}
                         />
                       </div>
-                      <div className="bg-navy text-navy-foreground h-20 flex items-center px-6 shrink-0">
+                      <div className={`${getFooterColor(block.large)} text-white h-20 flex items-center px-6 shrink-0`}>
                         <h4 className="text-lg font-bold text-left">{block.large.titulo}</h4>
                       </div>
                     </Card>
@@ -139,7 +148,7 @@ export function DynamicSection({ title, subtitle, resources, backgroundColor = "
                               crossOrigin={resource.imagen?.startsWith("http") ? "anonymous" : undefined}
                             />
                           </div>
-                          <div className="bg-navy text-navy-foreground min-h-[4.5rem] flex items-center px-4 shrink-0">
+                          <div className={`${getFooterColor(resource)} text-white min-h-[4.5rem] flex items-center px-4 shrink-0`}>
                             <h4 className="text-base font-bold text-left leading-tight">{resource.titulo}</h4>
                           </div>
                         </Card>
@@ -175,7 +184,7 @@ export function DynamicSection({ title, subtitle, resources, backgroundColor = "
                       crossOrigin={resource.imagen?.startsWith("http") ? "anonymous" : undefined}
                     />
                   </div>
-                  <div className="bg-navy text-navy-foreground h-20 flex items-center px-6 flex-shrink-0">
+                  <div className={`${getFooterColor(resource)} text-white h-20 flex items-center px-6 flex-shrink-0`}>
                     <h4 className="text-lg font-bold text-left">{resource.titulo}</h4>
                   </div>
                 </Card>
@@ -214,7 +223,7 @@ export function DynamicSection({ title, subtitle, resources, backgroundColor = "
                         crossOrigin={resource.imagen?.startsWith("http") ? "anonymous" : undefined}
                       />
                     </div>
-                    <div className="bg-navy text-navy-foreground h-32 flex items-center px-4 flex-shrink-0">
+                    <div className={`${getFooterColor(resource)} text-white h-32 flex items-center px-4 flex-shrink-0`}>
                       <h4 className="text-base font-bold text-left leading-tight">{resource.titulo}</h4>
                     </div>
                   </Card>

@@ -4,6 +4,7 @@ import type { ResourceV3 } from "@/lib/resources-cms-v3"
 interface DynamicStepSectionProps {
   stepNumber: string
   stepTitle: string
+  stepDescription?: string
   resources: ResourceV3[]
   onResourceComplete?: (resourceId: string) => void
 }
@@ -11,6 +12,7 @@ interface DynamicStepSectionProps {
 export function DynamicStepSection({
   stepNumber,
   stepTitle,
+  stepDescription,
   resources,
   onResourceComplete,
 }: DynamicStepSectionProps) {
@@ -24,14 +26,18 @@ export function DynamicStepSection({
             <div className="relative flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-[#E11383] to-[#C01070] shadow-lg">
               <span className="text-4xl font-black text-white">{stepNumber}</span>
             </div>
-            <div>
+            <div className="flex-1">
               <div className="text-sm font-semibold text-[#E11383] uppercase tracking-wider mb-1">
                 {stepNumber === "1" && "Primer Paso"}
                 {stepNumber === "2" && "Segundo Paso"}
                 {stepNumber === "3" && "Tercer Paso"}
                 {stepNumber === "4" && "Cuarto Paso"}
+                {stepNumber === "5" && "Quinto Paso"}
               </div>
               <h2 className="text-3xl font-bold text-[#1B1733] leading-tight">{stepTitle}</h2>
+              {stepDescription && (
+                <p className="text-base text-gray-600 mt-2 leading-relaxed">{stepDescription}</p>
+              )}
             </div>
           </div>
         </div>

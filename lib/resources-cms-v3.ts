@@ -28,6 +28,9 @@ export interface ResourceV3 {
 
   // Notas
   notas: string
+  
+  // Estilo
+  color: string // "azul", "rosa", o vacío
 }
 
 const GOOGLE_SHEET_CSV_URL =
@@ -86,7 +89,7 @@ function parseCSVv3(csv: string): ResourceV3[] {
     values.push(currentValue.trim())
 
     // Mapear a ResourceV3
-    // MOSTRAR,ORDEN,SECCIÓN,PASO,SUBSECCIÓN,TÍTULO,DESCRIPCIÓN,TEXTO BOTÓN,TIPO,URL VIDEO,URL ARCHIVO,IMAGEN,NOTAS
+    // MOSTRAR,ORDEN,SECCIÓN,PASO,SUBSECCIÓN,TÍTULO,DESCRIPCIÓN,TEXTO BOTÓN,TIPO,URL VIDEO,URL ARCHIVO,IMAGEN,NOTAS,COLOR
     const resource: ResourceV3 = {
       mostrar: values[0] === "SÍ" || values[0] === "SI" || values[0] === "YES",
       orden: parseInt(values[1]) || 0,
@@ -101,6 +104,7 @@ function parseCSVv3(csv: string): ResourceV3[] {
       url_archivo: values[10] || "",
       imagen: values[11] || "",
       notas: values[12] || "",
+      color: values[13] || "",
     }
 
     // Solo agregar recursos activos y con título
