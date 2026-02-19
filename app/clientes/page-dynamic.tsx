@@ -77,6 +77,8 @@ export default function ClientesPageDynamic() {
   const paso5Section = res.find((r) => r.paso === "5" && isSection(r))
   const interpretacionResources = res.filter((r) => r.seccion.includes("Interpretación") && !isSection(r))
   const interpretacionSection = res.find((r) => r.seccion.includes("Interpretación") && isSection(r))
+  const tutorialAdminSection = res.find((r) => r.seccion.includes("Tutorial Administrativo") && isSection(r))
+  const tutorialAdmin = res.find((r) => r.seccion.includes("Tutorial Administrativo") && !isSection(r))
   const agendarCita = res.find((r) => r.seccion.includes("Agendar"))
   const manualesResources = res.filter((r) => r.seccion.includes("Manuales") && !isSection(r))
   const manualesSection = res.find((r) => r.seccion.includes("Manuales") && isSection(r))
@@ -151,12 +153,17 @@ export default function ClientesPageDynamic() {
       })
     }
 
-    // 3. Agendar Cita
+    // 3. Tutorial Administrativo
+    if (tutorialAdmin) {
+      items.push({ id: "tutorial-admin", title: tutorialAdmin.titulo })
+    }
+
+    // 4. Agendar Cita
     if (agendarCita) {
       items.push({ id: "agendar", title: agendarCita.titulo })
     }
 
-    // 4. Manuales (platform)
+    // 5. Manuales (platform)
     if (manualesSection || manualesResources.length > 0) {
       items.push({
         id: "platform",
@@ -168,7 +175,7 @@ export default function ClientesPageDynamic() {
       })
     }
 
-    // 5. Bases Conceptuales
+    // 6. Bases Conceptuales
     if (conceptualSection || conceptualResources.length > 0) {
       items.push({
         id: "conceptual-bases",
@@ -180,7 +187,7 @@ export default function ClientesPageDynamic() {
       })
     }
 
-    // 6. Valoración Integral
+    // 7. Valoración Integral
     if (valoracionSection || valoracionResources.length > 0) {
       items.push({
         id: "assessment-support",
@@ -192,7 +199,7 @@ export default function ClientesPageDynamic() {
       })
     }
 
-    // 7. Estudios e Investigaciones
+    // 8. Estudios e Investigaciones
     if (investigacionSection || investigacionResources.length > 0) {
       items.push({
         id: "research",
@@ -204,7 +211,7 @@ export default function ClientesPageDynamic() {
       })
     }
 
-    // 8. Conoce más sobre Multiplicity (secciones estáticas)
+    // 9. Conoce más sobre Multiplicity (secciones estáticas)
     items.push({
       id: "multiplicity",
       title: "Conoce más sobre Multiplicity",
@@ -233,6 +240,8 @@ export default function ClientesPageDynamic() {
     paso5Resources,
     interpretacionSection,
     interpretacionResources,
+    tutorialAdminSection,
+    tutorialAdmin,
     agendarCita,
     manualesSection,
     manualesResources,
@@ -470,6 +479,36 @@ export default function ClientesPageDynamic() {
                   </div>
                 </div>
               </section>
+            </div>
+          )}
+
+          {/* Tutorial Administrativo */}
+          {tutorialAdmin && (
+            <div id="tutorial-admin" className="mb-20">
+              <div className="bg-navy rounded-3xl overflow-hidden shadow-lg">
+                <div className="grid md:grid-cols-2 md:min-h-[320px]">
+                  <div className="p-8 md:p-12 flex flex-col justify-center bg-navy">
+                    <h3 className="text-3xl md:text-4xl font-bold mb-4" style={{ color: "#E11383" }}>
+                      {tutorialAdmin.titulo}
+                    </h3>
+                    {tutorialAdminSection?.descripcion && (
+                      <div className="text-base md:text-lg text-white/90 whitespace-pre-line leading-relaxed">
+                        {tutorialAdminSection.descripcion}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="relative min-h-[200px] md:min-h-0 md:h-full w-full bg-black">
+                    <iframe
+                      src={getYouTubeEmbedUrl(tutorialAdmin.url_video_youtube)}
+                      title={tutorialAdmin.titulo}
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      className="absolute inset-0 w-full h-full"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 

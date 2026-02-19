@@ -37,16 +37,71 @@ const GOOGLE_SHEET_CSV_URL =
   "https://werhxhxexqboowzutevv.supabase.co/functions/v1/resources-csv"
 
 /**
- * Parse CSV V3 a array de objetos
+ * Parse CSV V3 a array de objetos (RFC 4180: soporta campos entrecomillados con saltos de línea)
  */
 function parseCSVv3(csv: string): ResourceV3[] {
-  const lines = csv.split("\n")
-  
-  // Encontrar la línea de headers (después de las instrucciones)
+  const rows: string[][] = []
+  let currentRow: string[] = []
+  let currentValue = ""
+  let insideQuotes = false
+
+  for (let i = 0; i < csv.length; i++) {
+    const char = csv[i]
+    const nextChar = csv[i + 1]
+
+    if (insideQuotes) {
+      if (char === '"' && nextChar === '"') {
+        currentValue += '"'
+        i++
+      } else if (char === '"') {
+        insideQuotes = false
+      } else {
+        currentValue += char
+      }
+      continue
+    }
+
+    // Fuera de comillas
+    if (char === '"') {
+      insideQuotes = true
+    } else if (char === ",") {
+      currentRow.push(currentValue.trim())
+      currentValue = ""
+    } else if (char === "\n") {
+      currentRow.push(currentValue.trim())
+      currentValue = ""
+      if (currentRow.some((cell) => cell.length > 0)) {
+        rows.push(currentRow)
+      }
+      currentRow = []
+    } else if (char === "\r") {
+      if (nextChar === "\n") {
+        i++
+      }
+      currentRow.push(currentValue.trim())
+      currentValue = ""
+      if (currentRow.some((cell) => cell.length > 0)) {
+        rows.push(currentRow)
+      }
+      currentRow = []
+    } else {
+      currentValue += char
+    }
+  }
+
+  if (currentValue.length > 0 || currentRow.length > 0) {
+    currentRow.push(currentValue.trim())
+    if (currentRow.some((cell) => cell.length > 0)) {
+      rows.push(currentRow)
+    }
+  }
+
+  // Encontrar el índice de la fila de cabecera (MOSTRAR, ORDEN)
   let headerIndex = -1
-  for (let i = 0; i < lines.length; i++) {
-    if (lines[i].includes("MOSTRAR") && lines[i].includes("ORDEN")) {
-      headerIndex = i
+  for (let r = 0; r < rows.length; r++) {
+    const firstCells = rows[r].slice(0, 2).join(" ")
+    if (firstCells.includes("MOSTRAR") && firstCells.includes("ORDEN")) {
+      headerIndex = r
       break
     }
   }
@@ -58,37 +113,10 @@ function parseCSVv3(csv: string): ResourceV3[] {
 
   const resources: ResourceV3[] = []
 
-  // Procesar filas de datos (después del header)
-  for (let i = headerIndex + 1; i < lines.length; i++) {
-    const line = lines[i]
-    if (!line.trim()) continue
+  for (let r = headerIndex + 1; r < rows.length; r++) {
+    const values = rows[r]
+    if (values.length === 0) continue
 
-    // Parse CSV considerando comillas
-    const values: string[] = []
-    let currentValue = ""
-    let insideQuotes = false
-
-    for (let j = 0; j < line.length; j++) {
-      const char = line[j]
-      const nextChar = line[j + 1]
-
-      if (char === '"') {
-        if (insideQuotes && nextChar === '"') {
-          currentValue += '"'
-          j++
-        } else {
-          insideQuotes = !insideQuotes
-        }
-      } else if (char === "," && !insideQuotes) {
-        values.push(currentValue.trim())
-        currentValue = ""
-      } else {
-        currentValue += char
-      }
-    }
-    values.push(currentValue.trim())
-
-    // Mapear a ResourceV3
     // MOSTRAR,ORDEN,SECCIÓN,PASO,SUBSECCIÓN,TÍTULO,DESCRIPCIÓN,TEXTO BOTÓN,TIPO,URL VIDEO,URL ARCHIVO,IMAGEN,NOTAS,COLOR
     const resource: ResourceV3 = {
       mostrar: values[0] === "SÍ" || values[0] === "SI" || values[0] === "YES",
@@ -107,7 +135,6 @@ function parseCSVv3(csv: string): ResourceV3[] {
       color: values[13] || "",
     }
 
-    // Solo agregar recursos activos y con título
     if (resource.mostrar && resource.titulo) {
       resources.push(resource)
     }
