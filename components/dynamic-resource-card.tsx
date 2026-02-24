@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { FileDown, Play } from "lucide-react"
@@ -10,9 +10,10 @@ import { getYouTubeEmbedUrl } from "@/lib/resources-cms-v3"
 interface DynamicResourceCardProps {
   resource: ResourceV3
   onComplete?: (resourceId: string) => void
+  autoOpen?: boolean
 }
 
-export function DynamicResourceCard({ resource, onComplete }: DynamicResourceCardProps) {
+export function DynamicResourceCard({ resource, onComplete, autoOpen = false }: DynamicResourceCardProps) {
   const [videoDialogOpen, setVideoDialogOpen] = useState(false)
   const [imageError, setImageError] = useState(false)
 
@@ -21,17 +22,27 @@ export function DynamicResourceCard({ resource, onComplete }: DynamicResourceCar
   // Si tiene valor en URL Archivo → tiene archivo (PDF, Excel, etc.)
   const hasFile = !!resource.url_archivo?.trim()
 
+  useEffect(() => {
+    if (autoOpen) {
+      if (hasVideo) {
+        setTimeout(() => setVideoDialogOpen(true), 300)
+      } else if (hasFile) {
+        setTimeout(() => window.open(resource.url_archivo, "_blank"), 300)
+      }
+    }
+  }, [autoOpen, hasVideo, hasFile, resource.url_archivo])
+
   const handlePlayVideo = () => {
     if (hasVideo) {
       setVideoDialogOpen(true)
-      if (onComplete) onComplete(`${resource.seccion}-${resource.orden}`)
+      if (onComplete) onComplete(resource.id)
     }
   }
 
   const handleOpenFile = () => {
     if (hasFile) {
       window.open(resource.url_archivo, "_blank")
-      if (onComplete) onComplete(`${resource.seccion}-${resource.orden}`)
+      if (onComplete) onComplete(resource.id)
     }
   }
 
@@ -68,7 +79,7 @@ export function DynamicResourceCard({ resource, onComplete }: DynamicResourceCar
   return (
     <>
       <Card
-        id={`resource-${resource.orden}`}
+        id={`resource-${resource.id}`}
         className="group relative overflow-hidden rounded-3xl hover:shadow-xl transition-all duration-300 border-0 h-64"
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}

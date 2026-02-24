@@ -106,7 +106,8 @@ export function DynamicSection({ title, subtitle, resources, backgroundColor = "
                 <div key={blockIndex} className="space-y-6">
                   {block.large && (
                     <Card
-                      data-card-id={`resource-${block.large.orden}`}
+                      id={`resource-${block.large.id}`}
+                      data-card-id={`resource-${block.large.id}`}
                       onClick={() => handleResourceClick(block.large!)}
                       className="group flex flex-col overflow-hidden rounded-3xl hover:shadow-xl transition-all duration-300 border-0 cursor-pointer p-0 gap-0"
                     >
@@ -131,8 +132,9 @@ export function DynamicSection({ title, subtitle, resources, backgroundColor = "
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                       {block.small.map((resource, index) => (
                         <Card
-                          key={`${resource.seccion}-${resource.orden}-${index}`}
-                          data-card-id={`resource-${resource.orden}`}
+                          key={resource.id}
+                          id={`resource-${resource.id}`}
+                          data-card-id={`resource-${resource.id}`}
                           onClick={() => handleResourceClick(resource)}
                           className="group flex flex-col overflow-hidden rounded-3xl hover:shadow-xl transition-all duration-300 border-0 cursor-pointer p-0 gap-0"
                         >
@@ -167,8 +169,9 @@ export function DynamicSection({ title, subtitle, resources, backgroundColor = "
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {groupedResources._main.map((resource, index) => (
                 <Card
-                  key={`${resource.seccion}-${resource.orden}-${index}`}
-                  data-card-id={`resource-${resource.orden}`}
+                  key={resource.id}
+                  id={`resource-${resource.id}`}
+                  data-card-id={`resource-${resource.id}`}
                   onClick={() => handleResourceClick(resource)}
                   className="group flex flex-col overflow-hidden rounded-3xl hover:shadow-xl transition-all duration-300 border-0 cursor-pointer p-0 gap-0"
                 >
@@ -206,8 +209,9 @@ export function DynamicSection({ title, subtitle, resources, backgroundColor = "
               >
                 {subsectionResources.map((resource, index) => (
                   <Card
-                    key={`${resource.seccion}-${resource.orden}-${index}`}
-                    data-card-id={`resource-${resource.orden}`}
+                    key={resource.id}
+                    id={`resource-${resource.id}`}
+                    data-card-id={`resource-${resource.id}`}
                     onClick={() => handleResourceClick(resource)}
                     className="group flex flex-col overflow-hidden rounded-3xl hover:shadow-xl transition-all duration-300 border-0 cursor-pointer p-0 gap-0"
                   >

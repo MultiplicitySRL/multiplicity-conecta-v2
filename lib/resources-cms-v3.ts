@@ -4,6 +4,9 @@
  */
 
 export interface ResourceV3 {
+  // Identificador único
+  id: string
+
   // Control
   mostrar: boolean
   orden: number
@@ -96,11 +99,11 @@ function parseCSVv3(csv: string): ResourceV3[] {
     }
   }
 
-  // Encontrar el índice de la fila de cabecera (MOSTRAR, ORDEN)
+  // Encontrar el índice de la fila de cabecera (ID, MOSTRAR, ORDEN)
   let headerIndex = -1
   for (let r = 0; r < rows.length; r++) {
-    const firstCells = rows[r].slice(0, 2).join(" ")
-    if (firstCells.includes("MOSTRAR") && firstCells.includes("ORDEN")) {
+    const firstCells = rows[r].slice(0, 3).join(" ")
+    if (firstCells.includes("ID") && firstCells.includes("MOSTRAR") && firstCells.includes("ORDEN")) {
       headerIndex = r
       break
     }
@@ -117,22 +120,23 @@ function parseCSVv3(csv: string): ResourceV3[] {
     const values = rows[r]
     if (values.length === 0) continue
 
-    // MOSTRAR,ORDEN,SECCIÓN,PASO,SUBSECCIÓN,TÍTULO,DESCRIPCIÓN,TEXTO BOTÓN,TIPO,URL VIDEO,URL ARCHIVO,IMAGEN,NOTAS,COLOR
+    // ID,MOSTRAR,ORDEN,SECCIÓN,PASO,SUBSECCIÓN,TÍTULO,DESCRIPCIÓN,TEXTO BOTÓN,TIPO,URL VIDEO,URL ARCHIVO,IMAGEN,NOTAS,COLOR
     const resource: ResourceV3 = {
-      mostrar: values[0] === "SÍ" || values[0] === "SI" || values[0] === "YES",
-      orden: parseInt(values[1]) || 0,
-      seccion: values[2] || "",
-      paso: values[3] || "",
-      subseccion: values[4] || "",
-      titulo: values[5] || "",
-      descripcion: values[6] || "",
-      texto_boton: values[7] || "",
-      tipo: values[8] || "",
-      url_video_youtube: values[9] || "",
-      url_archivo: values[10] || "",
-      imagen: values[11] || "",
-      notas: values[12] || "",
-      color: values[13] || "",
+      id: values[0] || "",
+      mostrar: values[1] === "SÍ" || values[1] === "SI" || values[1] === "YES",
+      orden: parseInt(values[2]) || 0,
+      seccion: values[3] || "",
+      paso: values[4] || "",
+      subseccion: values[5] || "",
+      titulo: values[6] || "",
+      descripcion: values[7] || "",
+      texto_boton: values[8] || "",
+      tipo: values[9] || "",
+      url_video_youtube: values[10] || "",
+      url_archivo: values[11] || "",
+      imagen: values[12] || "",
+      notas: values[13] || "",
+      color: values[14] || "",
     }
 
     if (resource.mostrar && resource.titulo) {
@@ -254,4 +258,21 @@ export function isDownloadable(resource: ResourceV3): boolean {
  */
 export function isExternalLink(resource: ResourceV3): boolean {
   return resource.tipo === "Link" && !!resource.url_archivo
+}
+
+/**
+ * Obtener un recurso por su ID
+ */
+export async function getResourceById(id: string): Promise<ResourceV3 | null> {
+  const resources = await fetchResourcesV3()
+  return resources.find((r) => r.id === id) || null
+}
+
+/**
+ * Obtener el ID de una sección (usa el ID del primer recurso de tipo Sección con ese nombre)
+ */
+export async function getSectionId(sectionName: string): Promise<string | null> {
+  const resources = await fetchResourcesV3()
+  const section = resources.find((r) => isSection(r) && r.seccion.includes(sectionName))
+  return section?.id || null
 }

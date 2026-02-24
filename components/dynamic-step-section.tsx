@@ -7,6 +7,7 @@ interface DynamicStepSectionProps {
   stepDescription?: string
   resources: ResourceV3[]
   onResourceComplete?: (resourceId: string) => void
+  autoOpenResourceId?: string | null
 }
 
 export function DynamicStepSection({
@@ -15,6 +16,7 @@ export function DynamicStepSection({
   stepDescription,
   resources,
   onResourceComplete,
+  autoOpenResourceId,
 }: DynamicStepSectionProps) {
   if (resources.length === 0) return null
 
@@ -45,7 +47,12 @@ export function DynamicStepSection({
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
         {resources.map((resource, index) => (
-          <DynamicResourceCard key={`${resource.seccion}-${resource.orden}-${index}`} resource={resource} onComplete={onResourceComplete} />
+          <DynamicResourceCard 
+            key={resource.id} 
+            resource={resource} 
+            onComplete={onResourceComplete}
+            autoOpen={autoOpenResourceId === resource.id}
+          />
         ))}
       </div>
     </div>

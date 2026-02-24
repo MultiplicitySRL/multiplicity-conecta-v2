@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
+import { useSearchParams } from "next/navigation"
 import { AboutSection } from "@/components/about-section"
 import { BusinessModelSection } from "@/components/business-model-section"
 import { ReportsSection } from "@/components/reports-section"
@@ -19,9 +20,11 @@ import type { ResourceV3 } from "@/lib/resources-cms-v3"
 import { isSection, getYouTubeEmbedUrl } from "@/lib/resources-cms-v3"
 
 export default function ClientesPageDynamic() {
+  const searchParams = useSearchParams()
   const [resources, setResources] = useState<ResourceV3[] | null>(null)
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [completedResources, setCompletedResources] = useState<string[]>([])
+  const [autoOpenResourceId, setAutoOpenResourceId] = useState<string | null>(null)
 
   // Cargar recursos desde la API en el cliente (siempre datos frescos)
   useEffect(() => {
@@ -41,6 +44,36 @@ export default function ClientesPageDynamic() {
     }
     load()
   }, [])
+
+  // Manejar deep linking cuando se carga la página con parámetros
+  useEffect(() => {
+    if (!resources || resources.length === 0) return
+
+    const resourceId = searchParams.get("resource")
+    const sectionId = searchParams.get("section")
+    
+    if (resourceId) {
+      const targetResource = resources.find((r) => r.id === resourceId)
+      if (targetResource) {
+        setAutoOpenResourceId(resourceId)
+        
+        setTimeout(() => {
+          const elementId = isSection(targetResource) ? `section-${targetResource.id}` : `resource-${targetResource.id}`
+          const element = document.getElementById(elementId)
+          if (element) {
+            element.scrollIntoView({ behavior: "smooth", block: "center" })
+          }
+        }, 100)
+      }
+    } else if (sectionId) {
+      setTimeout(() => {
+        const element = document.getElementById(sectionId)
+        if (element) {
+          element.scrollIntoView({ behavior: "smooth", block: "start" })
+        }
+      }, 100)
+    }
+  }, [resources, searchParams])
 
   useEffect(() => {
     const hasVisited = localStorage.getItem("multiplicity_visited")
@@ -309,7 +342,7 @@ export default function ClientesPageDynamic() {
           {/* Caso de Uso */}
           {introSection && (
             <div id="use-case" className="mb-20">
-              <div className="relative bg-navy rounded-3xl p-12 mb-12 overflow-hidden">
+              <div id={`section-${introSection.id}`} className="relative bg-navy rounded-3xl p-12 mb-12 overflow-hidden">
                 <div className="relative z-10 max-w-3xl">
                   <h2 className="text-5xl font-bold mb-6 text-left">
                     <span style={{ color: "#E11383" }}>
@@ -378,6 +411,7 @@ export default function ClientesPageDynamic() {
                     stepDescription={paso1Section.descripcion}
                     resources={paso1Resources}
                     onResourceComplete={handleResourceComplete}
+                    autoOpenResourceId={autoOpenResourceId}
                   />
                 </div>
               )}
@@ -391,6 +425,7 @@ export default function ClientesPageDynamic() {
                     stepDescription={paso2Section.descripcion}
                     resources={paso2Resources}
                     onResourceComplete={handleResourceComplete}
+                    autoOpenResourceId={autoOpenResourceId}
                   />
                 </div>
               )}
@@ -404,6 +439,7 @@ export default function ClientesPageDynamic() {
                     stepDescription={paso3Section.descripcion}
                     resources={paso3Resources}
                     onResourceComplete={handleResourceComplete}
+                    autoOpenResourceId={autoOpenResourceId}
                   />
                 </div>
               )}
@@ -417,6 +453,7 @@ export default function ClientesPageDynamic() {
                     stepDescription={paso4Section.descripcion}
                     resources={paso4Resources}
                     onResourceComplete={handleResourceComplete}
+                    autoOpenResourceId={autoOpenResourceId}
                   />
                 </div>
               )}
@@ -430,6 +467,7 @@ export default function ClientesPageDynamic() {
                     stepDescription={paso5Section.descripcion}
                     resources={paso5Resources}
                     onResourceComplete={handleResourceComplete}
+                    autoOpenResourceId={autoOpenResourceId}
                   />
                 </div>
               )}
@@ -471,9 +509,10 @@ export default function ClientesPageDynamic() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {interpretacionResources.map((resource, index) => (
                       <DynamicResourceCard
-                        key={`${resource.seccion}-${index}`}
+                        key={resource.id}
                         resource={resource}
                         onComplete={handleResourceComplete}
+                        autoOpen={autoOpenResourceId === resource.id}
                       />
                     ))}
                   </div>

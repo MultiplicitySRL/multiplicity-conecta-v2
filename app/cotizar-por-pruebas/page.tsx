@@ -1,14 +1,49 @@
 "use client"
 
+import { useSearchParams } from "next/navigation"
+import { Suspense } from "react"
 import DirectQuoteCalculator from "@/components/direct-quote-calculator"
 import Image from "next/image"
 import { Footer } from "@/components/footer"
+import { useEmbedSecurity } from "@/hooks/use-embed-security"
+import { BlockedAccessScreen } from "@/components/blocked-access-screen"
+import { CompanyHeader } from "@/components/company-header"
+import { Loader2 } from "lucide-react"
 
-export default function CotizarPorPruebasPage() {
+function CotizarPorPruebasContent() {
+  const searchParams = useSearchParams()
+  const embedSecurity = useEmbedSecurity()
+  
+  const companyId = searchParams.get("company_id")
+  const accountId = searchParams.get("account_id")
+
+  // Mostrar loading mientras se valida la seguridad
+  if (embedSecurity.isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-[#00BCB4]/10">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-10 w-10 text-[#00BCB4] animate-spin" />
+          <p className="text-muted-foreground font-medium">Verificando acceso...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Si el embed no es válido, mostrar pantalla de bloqueo
+  if (!embedSecurity.isValid) {
+    return <BlockedAccessScreen error={embedSecurity.error} />
+  }
+
+  // Embed válido, mostrar la página
   return (
     <main className="min-h-screen bg-gradient-to-br from-background via-background to-[#00BCB4]/10">
       <div className="bg-gradient-to-b from-[#00BCB4]/10 via-[#00BCB4]/5 to-transparent border-b border-border/50">
-        <div className="container mx-auto px-4 py-8 md:py-12 lg:py-16 text-center">
+        <div className="container mx-auto px-4 py-6 md:py-8 lg:py-12 text-center">
+          {/* Company Header - arriba de todo */}
+          <div className="mb-4 md:mb-6">
+            <CompanyHeader companyId={companyId} accountId={accountId} />
+          </div>
+
           <div className="mb-4 md:mb-6">
             <Image
               src="/images/multiplicity-logo.png"
@@ -24,8 +59,6 @@ export default function CotizarPorPruebasPage() {
             <span className="block">Cotización Directa por Pruebas</span>
           </h1>
 
-        
-
           <div className="flex flex-row items-center justify-center gap-3 sm:gap-6 text-xs sm:text-sm text-muted-foreground px-4">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-full bg-[#00BCB4]/10 flex items-center justify-center text-[#00BCB4] font-bold">
@@ -38,14 +71,14 @@ export default function CotizarPorPruebasPage() {
               <div className="w-8 h-8 rounded-full bg-[#00BCB4]/10 flex items-center justify-center text-[#00BCB4] font-bold">
                 2
               </div>
-              <span className="hidden sm:inline">Completa datos</span>
+              <span className="hidden sm:inline">Revisa y confirma</span>
             </div>
           </div>
         </div>
       </div>
 
       <div className="container mx-auto px-3 sm:px-4 py-6 md:py-8 lg:py-10">
-        <DirectQuoteCalculator />
+        <DirectQuoteCalculator companyId={companyId} accountId={accountId} />
       </div>
 
       <div className="container mx-auto px-3 sm:px-4 py-6 md:py-8">
@@ -98,5 +131,20 @@ export default function CotizarPorPruebasPage() {
 
       <Footer />
     </main>
+  )
+}
+
+export default function CotizarPorPruebasPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-[#00BCB4]/10">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-10 w-10 text-[#00BCB4] animate-spin" />
+          <p className="text-muted-foreground font-medium">Cargando...</p>
+        </div>
+      </div>
+    }>
+      <CotizarPorPruebasContent />
+    </Suspense>
   )
 }
