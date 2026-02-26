@@ -1,17 +1,26 @@
 
 "use client"
 
+import { useState } from "react"
 import { Card } from "@/components/ui/card"
 import { ArrowRight } from "lucide-react"
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from "@/components/ui/dialog"
+
+const YOUTUBE_VIDEO_ID = "zaPCA2Ka6Pc"
 
 export function AboutSection() {
+  const [videoDialogOpen, setVideoDialogOpen] = useState(false)
+
   const handlePresentacionClick = () => {
     window.open("/documentos/Presentacion de Servicios Multiplicity.pdf", "_blank")
   }
 
   const handleVideoClick = () => {
-    // Open Google Drive video in new tab
-    window.open("https://drive.google.com/file/d/1-wMmLfcbCymr6V0XfrfD9pIdFBJEOXw3/view", "_blank")
+    setVideoDialogOpen(true)
   }
 
   const handleCarteraClick = () => {
@@ -69,6 +78,28 @@ export function AboutSection() {
               </div>
             </div>
           </Card>
+
+          <Dialog open={videoDialogOpen} onOpenChange={setVideoDialogOpen}>
+            <DialogContent
+              className="max-w-6xl w-[95vw] p-0 gap-0 overflow-hidden rounded-2xl border bg-background shadow-xl lg:max-w-[min(92vw,1600px)] lg:w-[92vw]"
+              showCloseButton={true}
+            >
+              <div className="flex items-center justify-between px-6 py-4 border-b bg-background pr-14">
+                <DialogTitle className="text-xl font-bold text-foreground">
+                  Vídeo Acerca de Multiplicity
+                </DialogTitle>
+              </div>
+              <div className="relative w-full aspect-video bg-black rounded-b-2xl overflow-hidden lg:min-h-[70vh]">
+                <iframe
+                  src={`https://www.youtube.com/embed/${YOUTUBE_VIDEO_ID}?autoplay=1`}
+                  title="Vídeo Acerca de Multiplicity"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                  className="absolute inset-0 w-full h-full"
+                />
+              </div>
+            </DialogContent>
+          </Dialog>
 
           {/* Índices y Tendencias */}
           <Card
