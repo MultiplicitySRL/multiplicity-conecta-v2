@@ -9,7 +9,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Sparkles, CheckCircle2, Loader2, AlertCircle } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
-import { TEST_TO_SURVEY_TYPE_MAP, type TestKey } from "@/lib/types/company"
+import { buildInvoicePayload } from "@/lib/alegra-invoice-payload"
+import type { CreateInvoiceInput } from "@/lib/alegra-invoice-payload"
+
+const ALEGRA_TEST_IDS: Record<string, number> = {
+  "Test Competencias Plus": 1,
+  "Test Pens. Analítico y Sistémico": 2,
+  "Test Motivadores": 3,
+  "Test Competencias Básicas": 4,
+  "Test Razonamiento General": 5,
+}
 
 const BASE_PRICES = {
   competenciaPlus: 37.5,
@@ -111,9 +120,10 @@ const ITBIS_RATE = 0.18
 interface DirectQuoteCalculatorProps {
   companyId: string | null
   accountId: string | null
+  onSuccess?: () => void
 }
 
-export default function DirectQuoteCalculator({ companyId, accountId }: DirectQuoteCalculatorProps) {
+export default function DirectQuoteCalculator({ companyId, accountId, onSuccess }: DirectQuoteCalculatorProps) {
   const [showDetailsDialog, setShowDetailsDialog] = useState(false)
   const [currency, setCurrency] = useState("USD")
   const [exchangeRateUSD] = useState(63.9204)
@@ -175,7 +185,7 @@ export default function DirectQuoteCalculator({ companyId, accountId }: DirectQu
     const totalDiscountAmount = activeTests.reduce((sum, test) => sum + test.discountAmount, 0)
     const subtotalWithDiscount = activeTests.reduce((sum, test) => sum + test.totalWithDiscount, 0)
 
-    const itbisAmount = subtotalWithDiscount * ITBIS_RATE
+    const itbisAmount = subtotalWithDiscount * ITBIS_RATE  // companyType siempre es "local" en cotización directa
     const totalUSD = subtotalWithDiscount + itbisAmount
 
     let total = totalUSD
@@ -225,51 +235,97 @@ export default function DirectQuoteCalculator({ companyId, accountId }: DirectQu
   }
 
   const handleSubmit = async () => {
-    if (!companyId) {
-      setSubmitError("No se pudo identificar la empresa. Por favor, recarga la página.")
-      return
-    }
-
     setIsSubmitting(true)
     setSubmitError("")
 
     try {
-      const invoice_details = Object.entries(calculations.tests)
-        .filter(([_, qty]) => qty > 0)
-        .map(([key, qty]) => {
-          const mapping = TEST_TO_SURVEY_TYPE_MAP[key as TestKey]
-          return {
-            survey_type_id: mapping.survey_type_id,
-            amount: qty,
-            ...(mapping.is_plus !== undefined ? { is_plus: mapping.is_plus } : {}),
-          }
-        })
+      const formatCurrencyForNotes = (amount: number, sym: string) =>
+        `${sym} ${amount.toLocaleString("es-DO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
-      const response = await fetch("/api/invoices", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      const today = new Date()
+      const issueDate = today.toISOString().split("T")[0]
+      const dueDate = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
+
+      const alegraItems = calculations.testDetails
+        .filter((test) => test.qty > 0)
+        .map((test) => ({
+          id: ALEGRA_TEST_IDS[test.name],
+          name: test.name,
+          price: Math.round(test.price * 100) / 100,
+          quantity: test.qty,
+          discount:
+            test.hasDiscount && test.totalWithoutDiscount > 0
+              ? Math.round((test.discountAmount / test.totalWithoutDiscount) * 100 * 100) / 100
+              : 0,
+        }))
+
+      const notes = `Cotización directa por pruebas para ${calculations.totalTests} evaluaciones psicométricas.
+
+Descuento por volumen aplicado: ${formatCurrencyForNotes(calculations.totalDiscountAmount, calculations.symbol)}
+ITBIS (18%): ${formatCurrencyForNotes(calculations.itbisAmount, calculations.symbol)}
+Total: ${formatCurrencyForNotes(calculations.total, calculations.symbol)}`
+
+      const alegraInput: CreateInvoiceInput = {
+        customer: {
+          name: companyId ? `Empresa ID: ${companyId}` : accountId ? `Cuenta ID: ${accountId}` : "Cliente directo",
         },
-        body: JSON.stringify({
-          company_id: parseInt(companyId, 10),
-          invoice_details,
-          comment: "",
-        }),
-      })
-
-      const result = await response.json()
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.message || "Error al crear la factura")
+        items: alegraItems,
+        currency: "USD",
+        exchangeRate: exchangeRateUSD,
+        issueDate,
+        dueDate,
+        notes,
+        companyType: "local",
+        externalRef: `DIRECT-QUOTE-${companyId ?? accountId ?? "unknown"}-${Date.now()}`,
       }
 
-      // Guardar información básica para mostrar en pantalla de éxito
+      const alegraInvoicePayload = buildInvoicePayload(alegraInput, 0)
+
+      const fullPayload = {
+        currency,
+        companyType: "local",
+        calculations: {
+          subtotalWithoutDiscount: calculations.subtotalWithoutDiscount,
+          totalDiscountAmount: calculations.totalDiscountAmount,
+          subtotalWithDiscount: calculations.subtotalWithDiscount,
+          itbisAmount: calculations.itbisAmount,
+          totalUSD: calculations.totalUSD,
+          total: calculations.total,
+          symbol: calculations.symbol,
+          totalTests: calculations.totalTests,
+        },
+        scenarioTests: {
+          competenciaPlus: calculations.tests.competenciaPlus,
+          pensamientoAnalitico: calculations.tests.pensamientoAnalitico,
+          motivadores: calculations.tests.motivadores,
+          competenciasBasicas: calculations.tests.competenciasBasicas,
+          razonamientoGeneral: calculations.tests.razonamientoGeneral,
+        },
+        companyId: companyId ?? null,
+        accountId: accountId ?? null,
+        alegraInvoicePayload,
+      }
+
+      const response = await fetch(
+        "https://n8n.srv1464241.hstgr.cloud/webhook/286a3992-68a5-4ee7-a318-c25a6f4de689",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(fullPayload),
+        },
+      )
+
+      if (!response.ok) {
+        throw new Error(`Error al enviar la cotización: ${response.status}`)
+      }
+
       setInvoiceData({
-        message: result.message,
-        company_id: parseInt(companyId, 10),
+        message: "Tu cotización ha sido enviada exitosamente.",
+        company_id: companyId ? parseInt(companyId, 10) : null,
       })
       setIsSuccess(true)
       setShowDetailsDialog(false)
+      onSuccess?.()
     } catch (error: any) {
       console.error("Error al enviar cotización:", error)
       setSubmitError(error.message || "Error al procesar la solicitud. Por favor, intenta nuevamente.")
@@ -313,20 +369,16 @@ export default function DirectQuoteCalculator({ companyId, accountId }: DirectQu
             </div>
           </div>
         </div>
-        <h2 className="text-3xl font-bold text-foreground mb-3">¡Factura Creada Exitosamente!</h2>
-        <p className="text-muted-foreground text-lg mb-6">
-          {invoiceData.message || "La factura ha sido procesada y los créditos han sido agregados a tu cuenta."}
+        <h2 className="text-3xl font-bold text-foreground mb-3">¡Factura creada!</h2>
+        <p className="text-muted-foreground text-lg mb-4">
+          Tus pruebas han sido habilitadas y ya están listas para usar.
         </p>
-        <div className="bg-muted/50 rounded-lg p-6 text-left space-y-2 mb-6">
-          <p className="text-sm">
-            <span className="font-semibold">Total de pruebas:</span> {calculations.totalTests}
-          </p>
-          <p className="text-sm">
-            <span className="font-semibold">Monto total:</span> {formatCurrency(calculations.total, calculations.symbol)}
-          </p>
+        <div className="bg-amber-50 border border-amber-200 rounded-xl px-5 py-4 text-sm text-amber-800 mb-8">
+          Recuerda revisar y pagar tu factura para mantener el acceso sin interrupciones.
+          Puedes verla en el panel de facturas pendientes.
         </div>
-        <Button onClick={handleNewQuote} className="mt-6">
-          Nueva Cotización
+        <Button onClick={handleNewQuote}>
+          Hacer otra cotización
         </Button>
       </div>
     )
@@ -343,18 +395,31 @@ export default function DirectQuoteCalculator({ companyId, accountId }: DirectQu
               <div className="flex-1">
                 <CardTitle className="flex items-center gap-2 text-base sm:text-lg md:text-xl">
                   <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
-                  <span className="leading-tight">Ingresa la cantidad de pruebas que necesitas</span>
+                  <span className="leading-tight">Cotiza nuevas pruebas</span>
                 </CardTitle>
                 <CardDescription className="text-xs sm:text-sm mt-1.5">
-                  Especifica directamente cuántas pruebas de cada tipo requieres para tu organización.
+                  Ingresa las cantidades que necesitas y genera tu cotización personalizada.
                 </CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-4 px-3 sm:px-5 pb-5 md:pl-[72px]">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 lg:gap-6">
               {/* Left column: Inputs */}
-              <div className="space-y-4 mx-auto w-full max-w-md">
+              <div className="space-y-3 w-full max-w-xl">
+                <div className="flex items-center gap-2 justify-start">
+                  <span className="text-xs sm:text-sm text-muted-foreground font-medium">Moneda:</span>
+                  <Select value={currency} onValueChange={setCurrency}>
+                    <SelectTrigger className="w-[120px] sm:w-[140px] bg-background h-9 sm:h-10 text-xs sm:text-sm border-2 font-medium">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="USD">💵 USD</SelectItem>
+                      <SelectItem value="DOP">🇩🇴 DOP</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="competenciaPlus" className="text-sm sm:text-base font-semibold">
                     Test Competencias Plus
@@ -367,7 +432,7 @@ export default function DirectQuoteCalculator({ companyId, accountId }: DirectQu
                     placeholder="Ej: 50"
                     value={testQuantities.competenciaPlus}
                     onChange={(e) => setTestQuantities((prev) => ({ ...prev, competenciaPlus: e.target.value }))}
-                    className="text-sm sm:text-base h-10 sm:h-12 border-2 focus:border-primary transition-colors"
+                    className="text-sm h-9 sm:h-10 border-2 focus:border-primary transition-colors"
                   />
                 </div>
 
@@ -383,7 +448,7 @@ export default function DirectQuoteCalculator({ companyId, accountId }: DirectQu
                     placeholder="Ej: 50"
                     value={testQuantities.pensamientoAnalitico}
                     onChange={(e) => setTestQuantities((prev) => ({ ...prev, pensamientoAnalitico: e.target.value }))}
-                    className="text-sm sm:text-base h-10 sm:h-12 border-2 focus:border-primary transition-colors"
+                    className="text-sm h-9 sm:h-10 border-2 focus:border-primary transition-colors"
                   />
                 </div>
 
@@ -399,7 +464,7 @@ export default function DirectQuoteCalculator({ companyId, accountId }: DirectQu
                     placeholder="Ej: 30"
                     value={testQuantities.motivadores}
                     onChange={(e) => setTestQuantities((prev) => ({ ...prev, motivadores: e.target.value }))}
-                    className="text-sm sm:text-base h-10 sm:h-12 border-2 focus:border-primary transition-colors"
+                    className="text-sm h-9 sm:h-10 border-2 focus:border-primary transition-colors"
                   />
                 </div>
 
@@ -415,7 +480,7 @@ export default function DirectQuoteCalculator({ companyId, accountId }: DirectQu
                     placeholder="Ej: 100"
                     value={testQuantities.competenciasBasicas}
                     onChange={(e) => setTestQuantities((prev) => ({ ...prev, competenciasBasicas: e.target.value }))}
-                    className="text-sm sm:text-base h-10 sm:h-12 border-2 focus:border-primary transition-colors"
+                    className="text-sm h-9 sm:h-10 border-2 focus:border-primary transition-colors"
                   />
                 </div>
 
@@ -431,81 +496,95 @@ export default function DirectQuoteCalculator({ companyId, accountId }: DirectQu
                     placeholder="Ej: 100"
                     value={testQuantities.razonamientoGeneral}
                     onChange={(e) => setTestQuantities((prev) => ({ ...prev, razonamientoGeneral: e.target.value }))}
-                    className="text-sm sm:text-base h-10 sm:h-12 border-2 focus:border-primary transition-colors"
+                    className="text-sm h-9 sm:h-10 border-2 focus:border-primary transition-colors"
                   />
                 </div>
               </div>
 
-              {/* Right column: Currency selector and summary */}
+              {/* Right column: summary */}
               <div className="space-y-4">
-                <div className="flex items-center gap-2 justify-end">
-                  <span className="text-xs sm:text-sm text-muted-foreground font-medium">Moneda:</span>
-                  <Select value={currency} onValueChange={setCurrency}>
-                    <SelectTrigger className="w-[120px] sm:w-[140px] bg-background h-9 sm:h-10 text-xs sm:text-sm border-2 font-medium">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="USD">💵 USD</SelectItem>
-                      <SelectItem value="DOP">🇩🇴 DOP</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {calculations.totalTests > 0 && (
-                  <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg p-5 border-2 border-primary/20">
-                    <h3 className="text-lg font-bold mb-4 text-primary">Resumen de Cotización</h3>
-                    
-                    <div className="space-y-3 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Total de pruebas:</span>
-                        <span className="font-semibold">{calculations.totalTests}</span>
-                      </div>
-                      
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Descuento aplicado:</span>
-                        <span className="font-semibold text-green-600">
-                          {formatCurrency(convertCurrency(calculations.totalDiscountAmount), calculations.symbol)}
-                        </span>
-                      </div>
-
-                      <div className="flex justify-between pt-2 border-t">
-                        <span className="text-muted-foreground">Subtotal:</span>
-                        <span className="font-semibold">
-                          {formatCurrency(convertCurrency(calculations.subtotalWithDiscount), calculations.symbol)}
-                        </span>
-                      </div>
-
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">ITBIS (18%):</span>
-                        <span className="font-semibold">
-                          {formatCurrency(convertCurrency(calculations.itbisAmount), calculations.symbol)}
-                        </span>
-                      </div>
-
-                      <div className="flex justify-between pt-3 border-t-2 border-primary/30">
-                        <span className="font-bold text-base">TOTAL:</span>
-                        <span className="font-bold text-lg text-primary">
-                          {formatCurrency(calculations.total, calculations.symbol)}
-                        </span>
-                      </div>
+                <div className="overflow-x-auto -mx-1">
+                  <div className="min-w-full text-xs border-2 rounded-lg overflow-hidden shadow-sm">
+                    <div className="bg-gradient-to-r from-[#2d1b69] to-[#3d2b79] text-white grid grid-cols-2 gap-1 p-2.5 text-xs font-bold">
+                      <div>Prueba</div>
+                      <div className="text-center">Cantidad</div>
                     </div>
 
-                    <Button
-                      onClick={handleContinue}
-                      className="w-full mt-4 h-11 text-base font-semibold"
-                    >
-                      Continuar con esta cotización
-                    </Button>
-                  </div>
-                )}
+                    {calculations.totalTests === 0 ? (
+                      <div className="px-2.5 py-4 text-xs text-muted-foreground">
+                        Ingresa las cantidades de pruebas para ver el resumen de tu cotización.
+                      </div>
+                    ) : (
+                      <>
+                        {hasPlusTests && (
+                          <>
+                            <div className="bg-accent text-accent-foreground px-2.5 py-1.5 text-xs font-bold">Pruebas Plus</div>
+                            {calculations.testDetails
+                              .filter((test) => ["competenciaPlus", "pensamientoAnalitico", "motivadores"].includes(test.key))
+                              .map((test) => (
+                                <div
+                                  key={test.key}
+                                  className="grid grid-cols-2 gap-1 px-2.5 py-2 border-b hover:bg-primary/5 transition-colors"
+                                >
+                                  <div className="font-medium text-xs leading-tight">{test.name}</div>
+                                  <div className="text-center text-xs font-semibold">{test.qty > 0 ? test.qty : "-"}</div>
+                                </div>
+                              ))}
+                          </>
+                        )}
 
-                {calculations.totalTests === 0 && (
-                  <div className="bg-muted/30 rounded-lg p-6 text-center border-2 border-dashed">
-                    <p className="text-muted-foreground text-sm">
-                      Ingresa las cantidades de pruebas para ver tu cotización
-                    </p>
+                        {hasBasicTests && (
+                          <>
+                            <div className="bg-accent text-accent-foreground px-2.5 py-1.5 text-xs font-bold">
+                              Pruebas Básicas
+                            </div>
+                            {calculations.testDetails
+                              .filter((test) => ["competenciasBasicas", "razonamientoGeneral"].includes(test.key))
+                              .map((test) => (
+                                <div
+                                  key={test.key}
+                                  className="grid grid-cols-2 gap-1 px-2.5 py-2 border-b hover:bg-primary/5 transition-colors"
+                                >
+                                  <div className="font-medium text-xs leading-tight">{test.name}</div>
+                                  <div className="text-center text-xs font-semibold">{test.qty > 0 ? test.qty : "-"}</div>
+                                </div>
+                              ))}
+                          </>
+                        )}
+
+                        <div className="bg-gray-100 dark:bg-gray-800 px-2.5 py-1.5 space-y-1.5 text-xs">
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Descuento total aplicado:</span>
+                            <span className="font-semibold text-green-600 dark:text-green-400">
+                              {formatCurrency(convertCurrency(calculations.totalDiscountAmount), calculations.symbol)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">ITBIS (18%):</span>
+                            <span className="font-semibold">
+                              {formatCurrency(convertCurrency(calculations.itbisAmount), calculations.symbol)}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="bg-gradient-to-r from-gray-500 to-gray-600 dark:from-gray-600 dark:to-gray-700 px-2.5 py-3 text-xs font-bold">
+                          <div className="flex justify-between text-base text-white">
+                            <span>Total Neto</span>
+                            <span className="text-lg">{formatCurrency(calculations.total, calculations.symbol)}</span>
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
-                )}
+                </div>
+
+                <Button
+                  onClick={handleContinue}
+                  disabled={calculations.totalTests === 0}
+                  className="w-full h-11 text-base font-semibold disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed"
+                >
+                  Continuar con esta cotización
+                </Button>
               </div>
             </div>
           </CardContent>
@@ -522,173 +601,218 @@ export default function DirectQuoteCalculator({ companyId, accountId }: DirectQu
             </DialogHeader>
           </div>
 
-          <div className="px-6 py-6 overflow-y-auto max-h-[calc(95vh-120px)]">
-            {/* Tabla de detalles */}
-            <div className="bg-muted/30 rounded-lg p-5 border mb-6">
-              <div className="flex items-center gap-3 mb-5">
-                <Badge className="bg-primary text-primary-foreground text-base px-4 py-1">
-                  Cotización Personalizada
-                </Badge>
-                <span className="text-base text-muted-foreground">- Resumen de tu selección</span>
-              </div>
+          <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6 px-6 py-6 overflow-y-auto max-h-[calc(95vh-120px)]">
+            {/* Columna izquierda: tabla de detalles */}
+            <div className="space-y-6">
+              <div className="bg-muted/30 rounded-lg p-5 border">
+                <div className="flex items-center gap-3 mb-5">
+                  <Badge className="bg-primary text-primary-foreground text-base px-4 py-1">
+                    Cotización Personalizada
+                  </Badge>
+                  <span className="text-base text-muted-foreground">- Resumen de tu selección</span>
+                </div>
 
-              {/* Desktop Table */}
-              <div className="overflow-x-auto">
-                <div className="min-w-[800px] text-sm border rounded-lg overflow-hidden shadow-sm">
-                  <div className="bg-gradient-to-r from-[#2d1b69] to-[#3d2b79] text-white grid grid-cols-7 gap-3 p-3 text-[10px] leading-tight font-bold">
-                    <div className="col-span-1">Descripción</div>
-                    <div className="text-center">Cantidad</div>
-                    <div className="text-right">Costo Por Evaluado Sin Descuento (USD)</div>
-                    <div className="text-right">Monto Total Sin Descuento (USD)</div>
-                    <div className="text-right">Descuento Por Volumen (USD)</div>
-                    <div className="text-right">Costo Por Evaluado con Descuento (USD)</div>
-                    <div className="text-right">Valor a Pagar Multiplicity (USD)</div>
-                  </div>
-
-                  <div className="bg-gradient-to-r from-[#00a69c] to-[#00b8ac] text-white px-3 py-2 text-sm font-bold">
-                    Por Uso
-                  </div>
-
-                  {hasPlusTests && (
-                    <>
-                      <div className="bg-gray-200 dark:bg-gray-800 px-3 py-2 text-sm font-bold">Pruebas Plus</div>
-                      {calculations.testDetails
-                        .filter((test) =>
-                          ["competenciaPlus", "pensamientoAnalitico", "motivadores"].includes(test.key),
-                        )
-                        .map((test) => (
-                          <div
-                            key={test.key}
-                            className="grid grid-cols-7 gap-3 px-3 py-2.5 border-b hover:bg-muted/30 text-xs"
-                          >
-                            <div className="col-span-1 font-medium leading-tight">{test.name}</div>
-                            <div className="text-center">{test.qty > 0 ? test.qty : "-"}</div>
-                            <div className="text-right">
-                              {test.qty > 0 ? formatCurrency(convertCurrency(test.price), calculations.symbol) : "-"}
-                            </div>
-                            <div className="text-right">
-                              {test.qty > 0
-                                ? formatCurrency(convertCurrency(test.totalWithoutDiscount), calculations.symbol)
-                                : "-"}
-                            </div>
-                            <div className="text-right text-green-600 dark:text-green-400 font-semibold">
-                              {test.qty > 0 && test.hasDiscount
-                                ? formatCurrency(convertCurrency(test.discountAmount), calculations.symbol)
-                                : "-"}
-                            </div>
-                            <div className="text-right">
-                              {test.qty > 0
-                                ? formatCurrency(convertCurrency(test.priceWithDiscount), calculations.symbol)
-                                : "-"}
-                            </div>
-                            <div className="text-right font-semibold">
-                              {test.qty > 0
-                                ? formatCurrency(convertCurrency(test.totalWithDiscount), calculations.symbol)
-                                : "-"}
-                            </div>
-                          </div>
-                        ))}
-                    </>
-                  )}
-
-                  {hasBasicTests && (
-                    <>
-                      <div className="bg-gray-200 dark:bg-gray-800 px-3 py-2 text-sm font-bold">Pruebas Básicas</div>
-                      {calculations.testDetails
-                        .filter((test) => ["competenciasBasicas", "razonamientoGeneral"].includes(test.key))
-                        .map((test) => (
-                          <div
-                            key={test.key}
-                            className="grid grid-cols-7 gap-3 px-3 py-2.5 border-b hover:bg-muted/30 text-xs"
-                          >
-                            <div className="col-span-1 font-medium leading-tight">{test.name}</div>
-                            <div className="text-center">{test.qty > 0 ? test.qty : "-"}</div>
-                            <div className="text-right">
-                              {test.qty > 0 ? formatCurrency(convertCurrency(test.price), calculations.symbol) : "-"}
-                            </div>
-                            <div className="text-right">
-                              {test.qty > 0
-                                ? formatCurrency(convertCurrency(test.totalWithoutDiscount), calculations.symbol)
-                                : "-"}
-                            </div>
-                            <div className="text-right text-green-600 dark:text-green-400 font-semibold">
-                              {test.qty > 0 && test.hasDiscount
-                                ? formatCurrency(convertCurrency(test.discountAmount), calculations.symbol)
-                                : "-"}
-                            </div>
-                            <div className="text-right">
-                              {test.qty > 0
-                                ? formatCurrency(convertCurrency(test.priceWithDiscount), calculations.symbol)
-                                : "-"}
-                            </div>
-                            <div className="text-right font-semibold">
-                              {test.qty > 0
-                                ? formatCurrency(convertCurrency(test.totalWithDiscount), calculations.symbol)
-                                : "-"}
-                            </div>
-                          </div>
-                        ))}
-                    </>
-                  )}
-
-                  {/* Totales */}
-                  <div className="bg-gray-100 dark:bg-gray-900 grid grid-cols-7 gap-3 px-3 py-3 text-sm font-bold border-t-2">
-                    <div className="col-span-5 text-right">Subtotal (con descuentos):</div>
-                    <div></div>
-                    <div className="text-right">
-                      {formatCurrency(convertCurrency(calculations.subtotalWithDiscount), calculations.symbol)}
+                {/* Desktop Table */}
+                <div className="overflow-x-auto">
+                  <div className="min-w-[800px] text-sm border rounded-lg overflow-hidden shadow-sm">
+                    <div className="bg-gradient-to-r from-[#2d1b69] to-[#3d2b79] text-white grid grid-cols-7 gap-3 p-3 text-[10px] leading-tight font-bold">
+                      <div className="col-span-1">Descripción</div>
+                      <div className="text-center">Cantidad</div>
+                      <div className="text-right">Costo Por Evaluado Sin Descuento (USD)</div>
+                      <div className="text-right">Monto Total Sin Descuento (USD)</div>
+                      <div className="text-right">Descuento Por Volumen (USD)</div>
+                      <div className="text-right">Costo Por Evaluado con Descuento (USD)</div>
+                      <div className="text-right">Valor a Pagar Multiplicity (USD)</div>
                     </div>
-                  </div>
 
-                  <div className="bg-gray-100 dark:bg-gray-900 grid grid-cols-7 gap-3 px-3 py-2 text-sm">
-                    <div className="col-span-5 text-right">ITBIS (18%):</div>
-                    <div></div>
-                    <div className="text-right">
-                      {formatCurrency(convertCurrency(calculations.itbisAmount), calculations.symbol)}
+                    <div className="bg-gradient-to-r from-[#00a69c] to-[#00b8ac] text-white px-3 py-2 text-sm font-bold">
+                      Por Uso
                     </div>
-                  </div>
 
-                  <div className="bg-gradient-to-r from-[#2d1b69] to-[#3d2b79] text-white grid grid-cols-7 gap-3 px-3 py-4 text-base font-bold">
-                    <div className="col-span-5 text-right">TOTAL A PAGAR:</div>
-                    <div></div>
-                    <div className="text-right text-lg">
-                      {formatCurrency(calculations.total, calculations.symbol)}
+                    {hasPlusTests && (
+                      <>
+                        <div className="bg-gray-200 dark:bg-gray-800 px-3 py-2 text-sm font-bold">Pruebas Plus</div>
+                        {calculations.testDetails
+                          .filter((test) =>
+                            ["competenciaPlus", "pensamientoAnalitico", "motivadores"].includes(test.key),
+                          )
+                          .map((test) => (
+                            <div
+                              key={test.key}
+                              className="grid grid-cols-7 gap-3 px-3 py-2.5 border-b hover:bg-muted/30 text-xs"
+                            >
+                              <div className="col-span-1 font-medium leading-tight">{test.name}</div>
+                              <div className="text-center">{test.qty > 0 ? test.qty : "-"}</div>
+                              <div className="text-right">
+                                {test.qty > 0 ? formatCurrency(convertCurrency(test.price), calculations.symbol) : "-"}
+                              </div>
+                              <div className="text-right">
+                                {test.qty > 0
+                                  ? formatCurrency(convertCurrency(test.totalWithoutDiscount), calculations.symbol)
+                                  : "-"}
+                              </div>
+                              <div className="text-right text-green-600 dark:text-green-400 font-semibold">
+                                {test.qty > 0 && test.hasDiscount
+                                  ? formatCurrency(convertCurrency(test.discountAmount), calculations.symbol)
+                                  : "-"}
+                              </div>
+                              <div className="text-right">
+                                {test.qty > 0
+                                  ? formatCurrency(convertCurrency(test.priceWithDiscount), calculations.symbol)
+                                  : "-"}
+                              </div>
+                              <div className="text-right font-semibold">
+                                {test.qty > 0
+                                  ? formatCurrency(convertCurrency(test.totalWithDiscount), calculations.symbol)
+                                  : "-"}
+                              </div>
+                            </div>
+                          ))}
+                      </>
+                    )}
+
+                    {hasBasicTests && (
+                      <>
+                        <div className="bg-gray-200 dark:bg-gray-800 px-3 py-2 text-sm font-bold">Pruebas Básicas</div>
+                        {calculations.testDetails
+                          .filter((test) => ["competenciasBasicas", "razonamientoGeneral"].includes(test.key))
+                          .map((test) => (
+                            <div
+                              key={test.key}
+                              className="grid grid-cols-7 gap-3 px-3 py-2.5 border-b hover:bg-muted/30 text-xs"
+                            >
+                              <div className="col-span-1 font-medium leading-tight">{test.name}</div>
+                              <div className="text-center">{test.qty > 0 ? test.qty : "-"}</div>
+                              <div className="text-right">
+                                {test.qty > 0 ? formatCurrency(convertCurrency(test.price), calculations.symbol) : "-"}
+                              </div>
+                              <div className="text-right">
+                                {test.qty > 0
+                                  ? formatCurrency(convertCurrency(test.totalWithoutDiscount), calculations.symbol)
+                                  : "-"}
+                              </div>
+                              <div className="text-right text-green-600 dark:text-green-400 font-semibold">
+                                {test.qty > 0 && test.hasDiscount
+                                  ? formatCurrency(convertCurrency(test.discountAmount), calculations.symbol)
+                                  : "-"}
+                              </div>
+                              <div className="text-right">
+                                {test.qty > 0
+                                  ? formatCurrency(convertCurrency(test.priceWithDiscount), calculations.symbol)
+                                  : "-"}
+                              </div>
+                              <div className="text-right font-semibold">
+                                {test.qty > 0
+                                  ? formatCurrency(convertCurrency(test.totalWithDiscount), calculations.symbol)
+                                  : "-"}
+                              </div>
+                            </div>
+                          ))}
+                      </>
+                    )}
+
+                    {/* Subtotales */}
+                    <div className="bg-gradient-to-r from-gray-200 to-gray-300 dark:from-gray-600 dark:to-gray-700 text-gray-800 dark:text-white grid grid-cols-7 gap-3 px-3 py-3 text-sm font-bold">
+                      <div className="col-span-1">Subtotales</div>
+                      <div className="text-center">{calculations.totalTests}</div>
+                      <div className="text-right">-</div>
+                      <div className="text-right">
+                        {formatCurrency(convertCurrency(calculations.subtotalWithoutDiscount), calculations.symbol)}
+                      </div>
+                      <div className="text-right text-green-600 dark:text-green-300">
+                        {formatCurrency(convertCurrency(calculations.totalDiscountAmount), calculations.symbol)}
+                      </div>
+                      <div className="text-right">-</div>
+                      <div className="text-right">
+                        {formatCurrency(convertCurrency(calculations.subtotalWithDiscount), calculations.symbol)}
+                      </div>
+                    </div>
+
+                    {/* Totales finales */}
+                    <div className="bg-gradient-to-r from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 text-gray-800 dark:text-white">
+                      <div className="grid grid-cols-7 gap-3 px-3 py-2.5 border-b">
+                        <div className="col-span-5"></div>
+                        <div className="col-span-2 grid grid-cols-2 gap-3">
+                          <div className="text-right font-bold text-sm">Subtotal</div>
+                          <div className="text-right font-bold text-sm">
+                            {formatCurrency(convertCurrency(calculations.subtotalWithDiscount), calculations.symbol)}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-7 gap-3 px-3 py-2.5 border-b">
+                        <div className="col-span-5"></div>
+                        <div className="col-span-2 grid grid-cols-2 gap-3">
+                          <div className="text-right font-bold text-sm">ITBIS (18%)</div>
+                          <div className="text-right font-bold text-sm">
+                            {formatCurrency(convertCurrency(calculations.itbisAmount), calculations.symbol)}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-7 gap-3 px-3 py-3">
+                        <div className="col-span-5"></div>
+                        <div className="col-span-2 grid grid-cols-2 gap-3">
+                          <div className="text-right font-bold text-lg">Total Neto</div>
+                          <div className="text-right font-bold text-xl">
+                            {formatCurrency(calculations.total, calculations.symbol)}
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Error message */}
-            {submitError && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4 flex items-start gap-3">
-                <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm font-medium text-red-800">Error al procesar</p>
-                  <p className="text-xs text-red-700 mt-1">{submitError}</p>
-                </div>
-              </div>
-            )}
+            {/* Columna derecha: panel de acción */}
+            <div className="space-y-4">
+              <Card className="border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
+                <CardContent className="p-5 space-y-4">
+                  <div className="space-y-1">
+                    <h4 className="text-lg font-bold text-foreground">Confirmar cotización</h4>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      Al confirmar se creará la factura y tus pruebas quedarán habilitadas.
+                    </p>
+                  </div>
 
-            {/* Botones */}
-            <div className="flex gap-3 justify-end">
-              <Button 
-                variant="outline" 
-                onClick={() => setShowDetailsDialog(false)} 
-                disabled={isSubmitting}
-              >
-                Volver
-              </Button>
-              <Button onClick={handleSubmit} disabled={isSubmitting} className="min-w-[200px]">
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Procesando...
-                  </>
-                ) : (
-                  "Confirmar y Crear Factura"
-                )}
-              </Button>
+            
+
+                  {submitError && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
+                      <AlertCircle className="h-4 w-4 text-red-600 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-xs font-medium text-red-800">Error al procesar</p>
+                        <p className="text-xs text-red-700 mt-0.5">{submitError}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  <Button
+                    onClick={handleSubmit}
+                    disabled={isSubmitting}
+                    className="w-full h-12 text-base font-bold shadow-md hover:shadow-lg transition-all"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                        Procesando...
+                      </>
+                    ) : (
+                      "Confirmar y Crear Factura"
+                    )}
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowDetailsDialog(false)}
+                    disabled={isSubmitting}
+                    className="w-full"
+                  >
+                    Volver
+                  </Button>
+                </CardContent>
+              </Card>
             </div>
           </div>
         </DialogContent>
