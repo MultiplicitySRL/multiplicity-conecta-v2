@@ -3,7 +3,8 @@
 import { Plus, ArrowRight } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import Image from "next/image"
-import { getCalApi } from "@calcom/embed-react"
+
+const BOOKING_URL = "https://calendly.com/multiplicity-info/30min"
 
 export function HeroSection() {
   const scrollToSection = (sectionId: string) => {
@@ -13,18 +14,8 @@ export function HeroSection() {
     }
   }
 
-  const openBookingModal = async () => {
-    const cal = await getCalApi({ namespace: "30min" })
-    cal("ui", {
-      theme: "light",
-      cssVarsPerTheme: { light: { "cal-brand": "#E7540E" } },
-      hideEventTypeDetails: false,
-      layout: "month_view",
-    })
-    const bookingButton = document.querySelector('[data-cal-namespace="30min"]') as HTMLElement
-    if (bookingButton) {
-      bookingButton.click()
-    }
+  const openBookingModal = () => {
+    window.open(BOOKING_URL, "_blank")
   }
 
   return (

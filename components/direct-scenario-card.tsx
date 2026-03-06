@@ -8,7 +8,6 @@ import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Check, Calendar, ArrowRight, ArrowLeft } from "lucide-react"
 import { createAndEmailAlegraInvoice } from "@/lib/alegra"
-import { getCalApi } from "@calcom/embed-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -1027,12 +1026,6 @@ Responsabilidades de Multiplicity:
         </DialogContent>
       </Dialog>
 
-      <button
-        data-cal-namespace="30min"
-        data-cal-link="carlos-santos/30min"
-        data-cal-config='{"layout":"month_view","theme":"light"}'
-        style={{ display: "none" }}
-      />
     </>
   )
 }

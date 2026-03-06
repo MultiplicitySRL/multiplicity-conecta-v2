@@ -353,7 +353,7 @@ recursos.push({
   descripcion: "Agenda una cita con nosotros",
   texto_boton: "Agendar Cita",
   tipo: "Link",
-  url_archivo: "https://cal.com/carlos-santos/30min",
+  url_archivo: "https://calendly.com/multiplicity-info/30min",
   notas: "CTA para agendar reunión",
 })
 

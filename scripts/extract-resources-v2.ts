@@ -410,7 +410,7 @@ resourcesV2.push({
   descripcion: "Agenda una cita con nosotros",
   texto_boton: "Agendar Cita",
   tipo_accion: "Link Externo",
-  url_documento: "https://cal.com/carlos-santos/30min",
+  url_documento: "https://calendly.com/multiplicity-info/30min",
   url_video_youtube: "",
   imagen_miniatura: "",
   etiquetas: "cita, agendar, soporte",

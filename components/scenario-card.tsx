@@ -12,7 +12,6 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Check, ChevronRight, ChevronLeft, Loader2, Calendar, FileText } from "lucide-react"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { getCalApi } from "@calcom/embed-react"
 import { AnimatePresence, motion, LayoutGroup } from "framer-motion"
 import { buildInvoicePayload } from "@/lib/alegra-invoice-payload"
 import type { CreateInvoiceInput } from "@/lib/alegra-invoice-payload"
@@ -462,27 +461,8 @@ Responsabilidades de Multiplicity:
     }
   }
 
-  useEffect(() => {
-    ;(async () => {
-      const cal = await getCalApi({ namespace: "30min" })
-      cal("ui", {
-        theme: "light",
-        cssVarsPerTheme: { light: { "cal-brand": "#E7540E" } },
-        hideEventTypeDetails: false,
-        layout: "month_view",
-      })
-    })()
-  }, [])
-
   const handleScheduleMeeting = () => {
-    const button = document.createElement("button")
-    button.setAttribute("data-cal-namespace", "30min")
-    button.setAttribute("data-cal-link", "carlos-santos/30min")
-    button.setAttribute("data-cal-config", '{"layout":"month_view","theme":"light"}')
-    button.style.display = "none"
-    document.body.appendChild(button)
-    button.click()
-    document.body.removeChild(button)
+    window.open("https://calendly.com/multiplicity-info/30min", "_blank")
   }
 
   const handleContinueWithQuote = () => {

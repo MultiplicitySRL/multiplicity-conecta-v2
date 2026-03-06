@@ -417,7 +417,7 @@ resources.push({
   card_description: "Agenda una cita con nosotros",
   cta_label: "Agendar Cita",
   cta_type: "external",
-  cta_url: "https://cal.com/carlos-santos/30min",
+  cta_url: "https://calendly.com/multiplicity-info/30min",
   thumbnail_url: "",
   media_type: "link",
   media_url: "",

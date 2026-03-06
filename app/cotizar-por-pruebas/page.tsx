@@ -554,16 +554,7 @@ function CotizarPorPruebasContent() {
               </p>
               <div className="pt-2 md:pt-4">
                 <button
-                  onClick={() => {
-                    const button = document.createElement("button")
-                    button.setAttribute("data-cal-namespace", "30min")
-                    button.setAttribute("data-cal-link", "carlos-santos/30min")
-                    button.setAttribute("data-cal-config", '{"layout":"month_view","theme":"light"}')
-                    button.style.display = "none"
-                    document.body.appendChild(button)
-                    button.click()
-                    document.body.removeChild(button)
-                  }}
+                  onClick={() => window.open("https://calendly.com/multiplicity-info/30min", "_blank")}
                   className="inline-flex items-center gap-2 bg-white text-[#00BCB4] px-6 md:px-8 py-2.5 md:py-3 rounded-lg text-sm md:text-base font-semibold hover:bg-white/90 transition-colors shadow-lg"
                 >
                   Contáctanos
