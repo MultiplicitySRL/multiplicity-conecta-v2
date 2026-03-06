@@ -86,12 +86,13 @@ export function DemoSection() {
         participante5_apellido: participants[4]?.apellido || "",
         participante5_posicion: participants[4]?.posicion || "",
         participante5_email: participants[4]?.email || "",
+        responsable_email: "ingcarlosoficial@gmail.com",
       }
 
       console.log("[v0] Sending demo request:", payload)
 
       const response = await fetch(
-        "https://carlossantos147.app.n8n.cloud/webhook/300af3f6-c278-4934-b680-21591df7a825",
+        "https://n8n.srv1464241.hstgr.cloud/webhook/4e292a4c-ff0b-440f-ba99-02d0ccfc0e7c",
         {
           method: "POST",
           headers: {
@@ -266,7 +267,7 @@ export function DemoSection() {
                     </DialogHeader>
 
                     <div className="overflow-y-auto flex-1 px-8">
-                      <form onSubmit={handleSubmit} className="space-y-8 py-6">
+                      <form id="demo-form" onSubmit={handleSubmit} className="space-y-8 py-6">
                         <div className="space-y-6">
                           <div className="flex items-center justify-between pb-4 border-b">
                             <div className="flex items-center gap-3">
@@ -399,13 +400,7 @@ export function DemoSection() {
                         </Button>
                         <Button
                           type="submit"
-                          onClick={(e) => {
-                            e.preventDefault()
-                            const form = e.currentTarget.closest("form")
-                            if (form) {
-                              form.requestSubmit()
-                            }
-                          }}
+                          form="demo-form"
                           size="lg"
                           className="flex-1 h-12 bg-gradient-to-r from-[#4A1A4F] to-[#E11383] hover:opacity-90 font-bold text-base shadow-lg hover:shadow-xl transition-all"
                           disabled={isSubmitting}
