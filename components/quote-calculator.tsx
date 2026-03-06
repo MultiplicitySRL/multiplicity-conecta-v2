@@ -246,6 +246,31 @@ export default function QuoteCalculator() {
     setIsSubmitted(true)
   }
 
+  const WEBHOOK_URL = "https://n8n.srv1464241.hstgr.cloud/webhook/9a79886b-c75b-4fd1-a17a-99b88daf4c9c"
+
+  const handleFormComplete = async (payload: Record<string, unknown>) => {
+    const fullPayload = {
+      ...payload,
+      directivos: directivos || "0",
+      profesionales: profesionales || "0",
+      tecnicos: tecnicos || "0",
+      companyType,
+      currency,
+      totalPersonnel,
+    }
+    try {
+      await fetch(WEBHOOK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(fullPayload),
+      })
+    } catch (_e) {
+      // Opcional: mostrar toast de error
+    }
+    const scenarioId = payload.scenarioId as number
+    if (typeof scenarioId === "number") handleSelectScenario(scenarioId)
+  }
+
   const selectedScenarioData = scenarios.find((s) => s.id === selectedScenario)
 
   const StepIndicator = ({ step, isActive }: { step: number; isActive: boolean }) => (
@@ -514,6 +539,7 @@ export default function QuoteCalculator() {
                     exchangeRateEUR={exchangeRateEUR}
                     companyType={companyType}
                     onSelect={handleSelectScenario}
+                    onFormComplete={handleFormComplete}
                   />
                 ))}
               </div>

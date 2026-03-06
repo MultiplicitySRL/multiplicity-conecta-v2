@@ -2,6 +2,9 @@ const ALEGRA_BASE = "https://api.alegra.com/api/v1"
 const ALEGRA_EMAIL = "ingcarlosoficial@gmail.com"
 const ALEGRA_TOKEN = ""
 
+import { buildInvoicePayload } from "./alegra-invoice-payload"
+import type { CreateInvoiceInput } from "./alegra-invoice-payload"
+
 const auth = "Basic " + Buffer.from(`${ALEGRA_EMAIL}:${ALEGRA_TOKEN}`).toString("base64")
 
 async function http(path: string, init: RequestInit = {}) {
@@ -41,69 +44,6 @@ async function ensureContact(c: {
     // If contact already exists, try to find it
     // For now, rethrow the error
     throw e
-  }
-}
-
-function round2(n: number): number {
-  return Math.round(n * 100) / 100
-}
-
-type AlegraItem = {
-  id?: number
-  name?: string
-  price: number
-  quantity: number
-  discount?: number
-  taxIds?: number[]
-}
-
-type CreateInvoiceInput = {
-  customer: {
-    name: string
-    email?: string
-    identification?: string
-    phone?: string
-  }
-  items: AlegraItem[]
-  currency?: string
-  exchangeRate?: number
-  issueDate?: string
-  dueDate?: string
-  notes?: string
-  terms?: string
-  externalRef?: string
-  emailToSend?: string
-  companyType?: "local" | "international"
-}
-
-function buildInvoicePayload(input: CreateInvoiceInput, contactId: number) {
-  return {
-    client: { id: contactId },
-    date: input.issueDate,
-    dueDate: input.dueDate,
-    status: "open",
-    currency: {
-      code: "USD",
-      exchangeRate:63.9204,
-    },
-    items: input.items.map((it) => ({
-      ...(it.id ? { id: it.id } : { name: it.name }),
-      price: round2(it.price),
-      quantity: it.quantity,
-      ...(it.discount != null ? { discount: round2(it.discount) } : {}),
-      ...(input.companyType === "local"
-        ? {
-            tax: [
-              {
-                id: "1",
-              },
-            ],
-          }
-        : {}),
-    })),
-    ...(input.notes ? { observations: input.notes } : {}),
-    ...(input.terms ? { termsConditions: input.terms } : {}),
-    ...(input.externalRef ? { anotation: `externalRef=${input.externalRef}` } : {}),
   }
 }
 

@@ -14,6 +14,8 @@ import { Check, ChevronRight, ChevronLeft, Loader2, Calendar, FileText } from "l
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { getCalApi } from "@calcom/embed-react"
 import { AnimatePresence, motion, LayoutGroup } from "framer-motion"
+import { buildInvoicePayload } from "@/lib/alegra-invoice-payload"
+import type { CreateInvoiceInput } from "@/lib/alegra-invoice-payload"
 
 interface ScenarioCardProps {
   scenario: {
@@ -44,6 +46,7 @@ interface ScenarioCardProps {
   exchangeRateEUR: number
   companyType: "local" | "international"
   onSelect?: (scenarioId: number) => void
+  onFormComplete?: (data: Record<string, unknown>) => void
 }
 
 const TEST_NAMES = {
@@ -72,6 +75,7 @@ export default function ScenarioCard({
   exchangeRateEUR,
   companyType,
   onSelect,
+  onFormComplete,
 }: ScenarioCardProps) {
   const [showDetailsDialog, setShowDetailsDialog] = useState(false)
   const [showOnboardingDialog, setShowOnboardingDialog] = useState(false)
@@ -322,6 +326,90 @@ export default function ScenarioCard({
     }
 
     setIsSubmitting(true)
+
+    const formatCurrencyForNotes = (amount: number, sym: string) =>
+      `${sym} ${amount.toLocaleString("es-DO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+
+    const notes = `Cotización (${scenario.title}) para ${calculations.totalTests} evaluaciones psicométricas.
+
+Descuento por volumen aplicado: ${formatCurrencyForNotes(calculations.totalDiscountAmount, calculations.symbol)}
+ITBIS (18%): ${formatCurrencyForNotes(calculations.itbisAmount, calculations.symbol)}
+Total: ${formatCurrencyForNotes(calculations.total, calculations.symbol)}`
+
+    const terms = `Condiciones:
+- Pago único
+- Las licencias de evaluaciones por uso no tienen fecha de vencimiento
+- Permitido canjear productos de evaluación
+
+Responsabilidades de Multiplicity:
+- Ofrecer entrenamientos iniciales virtuales
+- Acompañamiento en definición de perfiles
+- Otorgar claves de acceso a los administradores
+- Soporte incidencias técnicas
+- Asesoría en interpretación de resultados
+- Manuales de Uso`
+
+    const today = new Date()
+    const issueDate = today.toISOString().split("T")[0]
+    const dueDate = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
+
+    const alegraItems = calculations.testDetails
+      .filter((test) => test.qty > 0)
+      .map((test) => ({
+        id: ALEGRA_TEST_IDS[test.name],
+        name: test.name,
+        price: Math.round(test.price * 100) / 100,
+        quantity: test.qty,
+        discount:
+          test.hasDiscount && test.totalWithoutDiscount > 0
+            ? Math.round((test.discountAmount / test.totalWithoutDiscount) * 100 * 100) / 100
+            : 0,
+      }))
+
+    const alegraInput: CreateInvoiceInput = {
+      customer: {
+        name: formData.razonSocial,
+        email: formData.contactoFact1Email,
+        identification: formData.rnc,
+        phone: formData.contactoFact1Telefono,
+      },
+      items: alegraItems,
+      currency: "USD",
+      exchangeRate: currency === "USD" ? exchangeRateUSD : currency === "EUR" ? exchangeRateEUR : exchangeRateUSD,
+      issueDate,
+      dueDate,
+      notes,
+      terms,
+      externalRef: `QUOTE-SCENARIO-${scenario.id}-${Date.now()}`,
+      emailToSend: formData.contactoFact1Email,
+      companyType,
+    }
+
+    const alegraInvoicePayload = buildInvoicePayload(alegraInput, 0)
+
+    const payload: Record<string, unknown> = {
+      scenarioId: scenario.id,
+      scenarioTitle: scenario.title,
+      scenarioSubtitle: scenario.subtitle,
+      scenarioDescription: scenario.description,
+      scenarioTests: scenario.tests,
+      currency,
+      companyType,
+      calculations: {
+        subtotalWithoutDiscount: calculations.subtotalWithoutDiscount,
+        totalDiscountAmount: calculations.totalDiscountAmount,
+        subtotalWithDiscount: calculations.subtotalWithDiscount,
+        itbisAmount: calculations.itbisAmount,
+        totalUSD: calculations.totalUSD,
+        total: calculations.total,
+        symbol: calculations.symbol,
+        totalTests: calculations.totalTests,
+      },
+      formData: { ...formData },
+      alegraInvoicePayload,
+    }
+    onFormComplete?.(payload)
+
     // Simulate API call
     await new Promise((resolve) => setTimeout(resolve, 1500))
     setIsSubmitting(false)
@@ -1214,8 +1302,8 @@ export default function ScenarioCard({
                                   >
                                     <div className="space-y-2">
                                       {[
-                                        { value: "credito", label: "Crédito Fiscal", desc: "Para empresas con NCF" },
-                                        { value: "consumo", label: "Consumo", desc: "Factura simplificada" },
+                                        { value: "Crédito Fiscal", label: "Crédito Fiscal", desc: "Para empresas con NCF" },
+                                        { value: "Consumo", label: "Consumo", desc: "Factura simplificada" },
                                       ].map((option) => (
                                         <label
                                           key={option.value}
@@ -1255,11 +1343,11 @@ export default function ScenarioCard({
                                     <div className="space-y-2">
                                       {[
                                         {
-                                          value: "email",
+                                          value: "Correo electrónico",
                                           label: "Correo electrónico",
                                           desc: "Recibirás la factura por email",
                                         },
-                                        { value: "fisica", label: "Entrega física", desc: "Recoger en oficina" },
+                                        { value: "Entrega física", label: "Entrega física", desc: "Recoger en oficina" },
                                       ].map((option) => (
                                         <label
                                           key={option.value}
