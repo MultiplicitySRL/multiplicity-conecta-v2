@@ -17,6 +17,7 @@ import {
 import Image from "next/image"
 import { useState } from "react"
 import { Users, Calendar, BarChart3, Plus, Minus, CheckCircle2 } from "lucide-react"
+import { useUser } from "@/lib/user-context"
 
 interface Participant {
   nombre: string
@@ -26,6 +27,7 @@ interface Participant {
 }
 
 export function DemoSection() {
+  const user = useUser()
   const [participants, setParticipants] = useState<Participant[]>([
     { nombre: "", apellido: "", posicion: "", email: "" },
   ])
@@ -63,9 +65,11 @@ export function DemoSection() {
         id: randomId,
         descripcion:
           "Crea el Negocio, con el demo y los participantes y responsable del demo el cual es el contacto principal del negocio",
-        empresa: "",
-        contacto_email: "",
-        contacto_nombre: "",
+        responsable_id: user?.id || "",
+        responsable_nombre: user?.nombre || "",
+        responsable_email: user?.email || "",
+        responsable_cargo: user?.cargo || "",
+        empresa_id: user?.empresa || "",
         participante1_nombre: participants[0]?.nombre || "",
         participante1_apellido: participants[0]?.apellido || "",
         participante1_posicion: participants[0]?.posicion || "",
@@ -86,7 +90,6 @@ export function DemoSection() {
         participante5_apellido: participants[4]?.apellido || "",
         participante5_posicion: participants[4]?.posicion || "",
         participante5_email: participants[4]?.email || "",
-        responsable_email: "ingcarlosoficial@gmail.com",
       }
 
       console.log("[v0] Sending demo request:", payload)
