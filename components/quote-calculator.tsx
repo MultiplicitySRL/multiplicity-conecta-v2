@@ -10,6 +10,7 @@ import { Users, Sparkles, CheckCircle2, Loader2, Building2, Globe } from "lucide
 import ScenarioCard from "./scenario-card"
 import ObservationsSection from "./observations-section"
 import Image from "next/image"
+import { useUser } from "@/lib/user-context"
 
 const BASE_PRICES = {
   competenciaPlus: 37.5,
@@ -122,6 +123,7 @@ function calculateVolumeDiscount(totalTests: number): number {
 }
 
 export default function QuoteCalculator() {
+  const user = useUser()
   const [currentStep, setCurrentStep] = useState(1)
   const [directivos, setDirectivos] = useState("")
   const [profesionales, setProfesionales] = useState("")
@@ -257,6 +259,10 @@ export default function QuoteCalculator() {
       companyType,
       currency,
       totalPersonnel,
+      empresa_id: user?.empresa || "",
+      responsable_id: user?.id || "",
+      responsable_nombre: user?.nombre || "",
+      responsable_email: user?.email || "",
     }
     try {
       await fetch(WEBHOOK_URL, {

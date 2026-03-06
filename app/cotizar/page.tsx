@@ -1,11 +1,15 @@
 "use client"
 
+import { Suspense } from "react"
 import QuoteCalculator from "@/components/quote-calculator"
 import Image from "next/image"
 import { Footer } from "@/components/footer"
+import { AccessGate } from "@/components/access-gate"
 
 export default function CotizarPage() {
   return (
+    <Suspense>
+      <AccessGate>
     <main className="min-h-screen bg-gradient-to-br from-background via-background to-[#00BCB4]/10">
       <div className="bg-gradient-to-b from-[#00BCB4]/10 via-[#00BCB4]/5 to-transparent border-b border-border/50">
         <div className="container mx-auto px-4 py-8 md:py-12 lg:py-16 text-center">
@@ -107,5 +111,7 @@ export default function CotizarPage() {
 
       <Footer />
     </main>
+      </AccessGate>
+    </Suspense>
   )
 }
