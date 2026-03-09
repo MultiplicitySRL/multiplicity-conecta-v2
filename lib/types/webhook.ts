@@ -5,25 +5,22 @@
 export interface NewUserWebhookRequest {
   email: string
   name: string
-  username: string
+  /**
+   * Puede ser opcional en el webhook
+   */
+  username?: string
   company_id: number
 }
 
+/**
+ * Datos mínimos de la cuenta que devolvemos
+ * (ya no vienen de un API externo)
+ */
 export interface ClientAPIAccountData {
-  id: number
-  username: string
   email: string
   name: string
-  companies_count: number
-  created_at: string
-}
-
-export interface ClientAPICreateAccountResponse {
-  message: string
-  data: {
-    account: ClientAPIAccountData
-    temporary_password: string
-  }
+  username?: string
+  company_id: number
 }
 
 export interface NewUserWebhookResponse {

@@ -2,14 +2,29 @@ import { NextRequest, NextResponse } from "next/server"
 import type { 
   NewUserWebhookRequest, 
   NewUserWebhookResponse,
-  ClientAPICreateAccountResponse 
+  ClientAPIAccountData
 } from "@/lib/types/webhook"
 
 export const dynamic = "force-dynamic"
 export const revalidate = 0
 
-const CLIENT_API_BASE_URL = "https://staging.multiplicityassess.com/api/admin"
+const N8N_WEBHOOK_URL = "https://n8n.srv1464241.hstgr.cloud/webhook/3a375aba-16cf-4aba-a252-2332c633fa32"
 const REQUEST_TIMEOUT = 15000
+
+const TEMPORARY_PASSWORD_LENGTH = 12
+
+function generateTemporaryPassword(length: number = TEMPORARY_PASSWORD_LENGTH): string {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+  let result = ""
+  const charsLength = chars.length
+
+  for (let i = 0; i < length; i++) {
+    const randomIndex = Math.floor(Math.random() * charsLength)
+    result += chars[randomIndex]
+  }
+
+  return result
+}
 
 /**
  * POST /api/accounts/new
@@ -122,16 +137,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Validar username
-    if (!username || typeof username !== 'string' || username.trim() === '') {
-      return NextResponse.json(
-        { 
-          success: false,
-          error: "Bad Request", 
-          message: "El campo 'username' es requerido y debe ser un string no vacío"
-        } as NewUserWebhookResponse,
-        { status: 400 }
-      )
+    // Validar username (opcional, pero si viene debe ser string no vacío)
+    if (username !== undefined) {
+      if (typeof username !== 'string' || username.trim() === '') {
+        return NextResponse.json(
+          { 
+            success: false,
+            error: "Bad Request", 
+            message: "El campo 'username', si se envía, debe ser un string no vacío"
+          } as NewUserWebhookResponse,
+          { status: 400 }
+        )
+      }
     }
 
     // Validar company_id (requerido)
@@ -146,20 +163,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verificar que el API_KEY esté configurado
-    const apiKey = process.env.API_KEY
-    if (!apiKey) {
-      console.error("API_KEY no configurado en variables de entorno")
-      return NextResponse.json(
-        { 
-          success: false,
-          error: "Server Error", 
-          message: "Error de configuración del servidor"
-        } as NewUserWebhookResponse,
-        { status: 500 }
-      )
-    }
-
     // Log de usuario nuevo recibido
     console.log("Creando nuevo usuario:", {
       email,
@@ -169,111 +172,68 @@ export async function POST(request: NextRequest) {
       timestamp: new Date().toISOString()
     })
 
-    // Preparar el payload para el API del cliente
-    const payload = {
-      account: {
-        username,
-        email,
-        name
-      }
+    // Generar temporary_password
+    const temporaryPassword = generateTemporaryPassword()
+
+    // Preparar datos de la cuenta para enviar y devolver
+    const account: ClientAPIAccountData = {
+      email,
+      name,
+      ...(username ? { username } : {}),
+      company_id,
     }
 
-    // Llamar al API del cliente para crear el usuario
+    // Preparar el payload para el webhook de n8n
+    const payload = {
+      ...account,
+      temporary_password: temporaryPassword,
+    }
+
+    // Llamar al webhook de n8n
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT)
 
     try {
       const response = await fetch(
-        `${CLIENT_API_BASE_URL}/companies/${company_id}/accounts`,
+        N8N_WEBHOOK_URL,
         {
           method: "POST",
           headers: {
-            "Authorization": `Bearer ${apiKey}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify(payload),
           signal: controller.signal,
-        }
+        },
       )
 
       clearTimeout(timeoutId)
 
-      // Manejar diferentes códigos de respuesta
-      if (response.status === 404) {
-        return NextResponse.json(
-          { 
-            success: false,
-            error: "Not Found", 
-            message: `Empresa con ID ${company_id} no encontrada`
-          } as NewUserWebhookResponse,
-          { status: 404 }
-        )
-      }
-
-      if (response.status === 401) {
-        console.error("API_KEY inválido o expirado")
-        return NextResponse.json(
-          { 
-            success: false,
-            error: "Unauthorized", 
-            message: "Error de autenticación con el servidor del cliente"
-          } as NewUserWebhookResponse,
-          { status: 401 }
-        )
-      }
-
-      if (response.status === 422 || response.status === 400) {
-        const errorData = await response.json().catch(() => ({}))
-        console.error(`Error de validación del API del cliente: ${response.status}`, errorData)
-        return NextResponse.json(
-          { 
-            success: false,
-            error: "Validation Error", 
-            message: errorData.message || errorData.error || "Error de validación al crear el usuario"
-          } as NewUserWebhookResponse,
-          { status: 400 }
-        )
-      }
-
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
-        console.error(`Error del API del cliente: ${response.status}`, errorData)
+        console.error(`Error al llamar al webhook de n8n: ${response.status}`, errorData)
         return NextResponse.json(
           { 
             success: false,
-            error: "External API Error", 
-            message: errorData.message || errorData.error || "Error al crear el usuario en el sistema del cliente"
+            error: "External Workflow Error", 
+            message: errorData.message || errorData.error || "Error al ejecutar el flujo externo de creación de usuario"
           } as NewUserWebhookResponse,
           { status: response.status }
         )
       }
 
-      // Parsear la respuesta exitosa
-      const clientData: ClientAPICreateAccountResponse = await response.json()
-      
-      console.log("Usuario creado exitosamente:", {
-        account_id: clientData.data.account.id,
-        email: clientData.data.account.email,
+      console.log("Webhook de n8n ejecutado exitosamente para usuario:", {
+        email: account.email,
         timestamp: new Date().toISOString()
       })
 
-      // TODO: Aquí se implementará el envío del email de bienvenida
-      // Ejemplo:
-      // await sendWelcomeEmail({
-      //   to: clientData.data.account.email,
-      //   name: clientData.data.account.name,
-      //   username: clientData.data.account.username,
-      //   temporaryPassword: clientData.data.temporary_password
-      // })
-
-      // Respuesta exitosa
+      // Respuesta exitosa con el formato solicitado
       return NextResponse.json(
         {
           success: true,
-          message: "Usuario creado exitosamente. Email de bienvenida enviado.",
+          message: "success",
           data: {
-            account: clientData.data.account,
-            temporary_password: clientData.data.temporary_password
+            account,
+            temporary_password: temporaryPassword,
           }
         } as NewUserWebhookResponse,
         { 
