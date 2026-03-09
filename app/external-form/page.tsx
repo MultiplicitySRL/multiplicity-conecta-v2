@@ -8,10 +8,10 @@ export default function ExternalFormPage() {
         {/* Logo */}
         <div className="flex justify-center mb-8">
           <Image
-            src="/images/Multiplicity Conecta logo.png"
-            alt="Multiplicity Logo"
-            width={220}
-            height={66}
+            src="/images/multiplicity-logo.png"
+            alt="Multiplicity"
+            width={270}
+            height={110}
             className="object-contain"
             priority
           />
@@ -21,11 +21,11 @@ export default function ExternalFormPage() {
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
           <div className="bg-navy px-6 py-6 text-white">
             <h1 className="text-2xl font-bold mb-1">
-              Solicita tu <span className="text-[#E11383]">acceso</span>
+              Obtener más <span className="text-[#E11383]">información</span>
             </h1>
             <p className="text-white/80 text-sm">
-              Completa el formulario y te enviaremos un enlace personalizado para acceder a la
-              plataforma.
+              Completa el formulario y te enviaremos más información sobre Multiplicity y cómo
+              aprovechar la plataforma en tu organización.
             </p>
           </div>
 

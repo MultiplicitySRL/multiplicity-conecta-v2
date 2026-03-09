@@ -170,7 +170,7 @@ export function AccessRequestForm({ compact = false }: AccessRequestFormProps) {
             Enviando...
           </>
         ) : (
-          "Solicitar acceso"
+          "Enviar correo"
         )}
       </Button>
     </form>
