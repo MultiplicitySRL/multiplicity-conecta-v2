@@ -9,7 +9,10 @@ export interface NewUserWebhookRequest {
    * Puede ser opcional en el webhook
    */
   username?: string
-  company_id: number
+  /**
+   * Puede ser opcional en el webhook
+   */
+  company_id?: number
 }
 
 /**
@@ -20,7 +23,7 @@ export interface ClientAPIAccountData {
   email: string
   name: string
   username?: string
-  company_id: number
+  company_id?: number
 }
 
 export interface NewUserWebhookResponse {

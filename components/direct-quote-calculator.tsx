@@ -325,6 +325,9 @@ Total: ${formatCurrencyForNotes(calculations.total, calculations.symbol)}`
       })
       setIsSuccess(true)
       setShowDetailsDialog(false)
+      if (typeof window !== "undefined") {
+        window.scrollTo({ top: 0, behavior: "smooth" })
+      }
       onSuccess?.()
     } catch (error: any) {
       console.error("Error al enviar cotización:", error)
@@ -347,16 +350,6 @@ Total: ${formatCurrencyForNotes(calculations.total, calculations.symbol)}`
     setSubmitError("")
   }
 
-  const StepIndicator = ({ step, isActive }: { step: number; isActive: boolean }) => (
-    <div
-      className={`flex items-center justify-center w-10 h-10 rounded-full text-sm font-semibold transition-all ${
-        isActive ? "bg-primary text-primary-foreground scale-110 shadow-lg" : "bg-muted text-muted-foreground"
-      }`}
-    >
-      {step}
-    </div>
-  )
-
   // Pantalla de éxito
   if (isSuccess && invoiceData) {
     return (
@@ -373,10 +366,7 @@ Total: ${formatCurrencyForNotes(calculations.total, calculations.symbol)}`
         <p className="text-muted-foreground text-lg mb-4">
           Tus pruebas han sido habilitadas y ya están listas para usar.
         </p>
-        <div className="bg-amber-50 border border-amber-200 rounded-xl px-5 py-4 text-sm text-amber-800 mb-8">
-          Recuerda revisar y pagar tu factura para mantener el acceso sin interrupciones.
-          Puedes verla en el panel de facturas pendientes.
-        </div>
+       
         <Button onClick={handleNewQuote}>
           Hacer otra cotización
         </Button>
@@ -391,7 +381,6 @@ Total: ${formatCurrencyForNotes(calculations.total, calculations.symbol)}`
         <Card className="shadow-md ring-2 ring-primary/50 shadow-xl">
           <CardHeader className="pb-3 pt-4 px-3 sm:px-5">
             <div className="flex items-start gap-3 md:gap-4">
-              <StepIndicator step={1} isActive={true} />
               <div className="flex-1">
                 <CardTitle className="flex items-center gap-2 text-base sm:text-lg md:text-xl">
                   <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />

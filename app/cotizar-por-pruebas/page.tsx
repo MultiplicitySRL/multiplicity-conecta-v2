@@ -62,6 +62,7 @@ function CotizarPorPruebasContent() {
   const [invoicesError, setInvoicesError] = useState<string | null>(null)
   const [selectedInvoice, setSelectedInvoice] = useState<AlegraInvoice | null>(null)
   const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false)
+  const [visiblePendingInvoicesCount, setVisiblePendingInvoicesCount] = useState(5)
 
   const fetchInvoices = useCallback(async (signal?: AbortSignal) => {
     if (!invoiceClientId) return
@@ -113,6 +114,12 @@ function CotizarPorPruebasContent() {
     invoices?.filter((invoice) => invoice.status === "closed" || invoice.balance === 0) ?? []
   const hasAnyInvoices = !!invoices && invoices.length > 0
   const primaryClient = invoices?.[0]?.client
+
+  const visiblePendingInvoices = pendingInvoices.slice(0, visiblePendingInvoicesCount)
+
+  useEffect(() => {
+    setVisiblePendingInvoicesCount(5)
+  }, [pendingInvoices.length])
 
   // Mostrar loading mientras se valida la seguridad
   if (embedSecurity.isLoading) {
@@ -210,8 +217,21 @@ function CotizarPorPruebasContent() {
                 {!isLoadingInvoices &&
                   !invoicesError &&
                   pendingInvoices.length > 0 && (
-                    <div className="space-y-2.5">
-                      {pendingInvoices.map((invoice) => (
+                    <div
+                      className="space-y-2.5 max-h-96 overflow-y-auto pr-1"
+                      onScroll={(e) => {
+                        const target = e.currentTarget
+                        const nearBottom =
+                          target.scrollTop + target.clientHeight >= target.scrollHeight - 16
+
+                        if (nearBottom && visiblePendingInvoicesCount < pendingInvoices.length) {
+                          setVisiblePendingInvoicesCount((prev) =>
+                            Math.min(prev + 5, pendingInvoices.length),
+                          )
+                        }
+                      }}
+                    >
+                      {visiblePendingInvoices.map((invoice) => (
                         <div
                           key={invoice.id}
                           role="button"

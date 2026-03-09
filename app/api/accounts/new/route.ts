@@ -31,7 +31,7 @@ function generateTemporaryPassword(length: number = TEMPORARY_PASSWORD_LENGTH): 
  * 
  * Webhook para crear usuarios nuevos en el sistema del cliente
  * Requiere: Bearer token en Authorization header
- * Body: { email, name, username, company_id }
+ * Body: { email, name, username?, company_id? }
  * 
  * Flujo:
  * 1. Valida el webhook token
@@ -151,16 +151,18 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Validar company_id (requerido)
-    if (!company_id || typeof company_id !== 'number' || isNaN(company_id) || company_id <= 0) {
-      return NextResponse.json(
-        { 
-          success: false,
-          error: "Bad Request", 
-          message: "El campo 'company_id' es requerido y debe ser un número positivo"
-        } as NewUserWebhookResponse,
-        { status: 400 }
-      )
+    // Validar company_id (opcional, pero si viene debe ser número positivo)
+    if (company_id !== undefined) {
+      if (typeof company_id !== 'number' || isNaN(company_id) || company_id <= 0) {
+        return NextResponse.json(
+          { 
+            success: false,
+            error: "Bad Request", 
+            message: "El campo 'company_id', si se envía, debe ser un número positivo"
+          } as NewUserWebhookResponse,
+          { status: 400 }
+        )
+      }
     }
 
     // Log de usuario nuevo recibido
@@ -180,7 +182,7 @@ export async function POST(request: NextRequest) {
       email,
       name,
       ...(username ? { username } : {}),
-      company_id,
+      ...(company_id !== undefined ? { company_id } : {}),
     }
 
     // Preparar el payload para el webhook de n8n
