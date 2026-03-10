@@ -80,48 +80,58 @@ export function DynamicResourceCard({ resource, onComplete, autoOpen = false }: 
     <>
       <Card
         id={`resource-${resource.id}`}
-        className="group relative overflow-hidden rounded-3xl hover:shadow-xl transition-all duration-300 border-0 h-64"
+        className="group flex flex-col overflow-hidden rounded-3xl hover:shadow-xl transition-all duration-300 border-0 bg-white p-0 gap-0 h-full"
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={imageSrc}
-          alt={resource.titulo}
-          className="w-full h-full object-cover"
-          onError={(e) => {
-            if (!imageError) {
-              console.error(`Error loading image for orden ${resource.orden}:`, imageSrc)
-              setImageError(true)
-              e.currentTarget.src = "/placeholder.svg"
-            }
-          }}
-          crossOrigin={isExternalImage ? "anonymous" : undefined}
-        />
-        <div className={`absolute bottom-0 left-0 right-0 ${getFooterColor()} text-white p-4`}>
-          <h4 className="text-base font-bold leading-tight line-clamp-2 mb-1">{resource.titulo}</h4>
-          {resource.descripcion && (
-            <p className="text-sm text-white/80 leading-tight line-clamp-1 mb-2">{resource.descripcion}</p>
-          )}
-          <div className="flex flex-col sm:flex-row gap-2">
-            {hasVideo && (
-              <button
-                onClick={handlePlayVideo}
-                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-semibold transition-colors ${getButtonColor()}`}
-              >
-                <Play className="w-4 h-4 shrink-0" />
-                <span>{resource.texto_boton?.trim() || "Ver Video"}</span>
-              </button>
-            )}
-            {hasFile && (
-              <button
-                onClick={handleOpenFile}
-                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-semibold transition-colors ${getButtonColor()}`}
-              >
-                <FileDown className="w-4 h-4 shrink-0" />
-                <span>{hasVideo ? "Descargar Guía" : (resource.texto_boton?.trim() || "Descargar Guía")}</span>
-              </button>
-            )}
-            {!hasVideo && !hasFile && resource.texto_boton && (
-              <span className="text-sm text-white/90 py-1">{resource.texto_boton}</span>
+        <div className="w-full flex flex-col h-full">
+          <div className="relative w-full aspect-video overflow-hidden flex-shrink-0 bg-gray-100">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={imageSrc}
+              alt={resource.titulo}
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                if (!imageError) {
+                  console.error(`Error loading image for orden ${resource.orden}:`, imageSrc)
+                  setImageError(true)
+                  e.currentTarget.src = "/placeholder.svg"
+                }
+              }}
+              crossOrigin={isExternalImage ? "anonymous" : undefined}
+            />
+          </div>
+
+          <div className={`${getFooterColor()} text-white px-6 py-4 flex flex-col justify-between flex-1`}>
+            <div>
+              <h4 className="text-base font-bold leading-tight line-clamp-2">{resource.titulo}</h4>
+              {resource.descripcion && (
+                <p className="text-sm text-white/80 leading-snug line-clamp-2 mt-1">{resource.descripcion}</p>
+              )}
+            </div>
+
+            {(hasVideo || hasFile || resource.texto_boton) && (
+              <div className="flex flex-col gap-2 mt-3">
+                {hasVideo && (
+                  <button
+                    onClick={handlePlayVideo}
+                    className={`inline-flex items-center justify-center gap-2 h-11 px-5 rounded-full text-sm font-semibold transition-colors ${getButtonColor()}`}
+                  >
+                    <Play className="w-4 h-4 shrink-0" />
+                    <span>{resource.texto_boton?.trim() || "Ver Video"}</span>
+                  </button>
+                )}
+                {hasFile && (
+                  <button
+                    onClick={handleOpenFile}
+                    className={`inline-flex items-center justify-center gap-2 h-11 px-5 rounded-full text-sm font-semibold transition-colors ${getButtonColor()}`}
+                  >
+                    <FileDown className="w-4 h-4 shrink-0" />
+                    <span>{hasVideo ? "Descargar Guía" : resource.texto_boton?.trim() || "Descargar Guía"}</span>
+                  </button>
+                )}
+                {!hasVideo && !hasFile && resource.texto_boton && (
+                  <span className="text-sm text-white/90 py-1">{resource.texto_boton}</span>
+                )}
+              </div>
             )}
           </div>
         </div>

@@ -21,7 +21,7 @@ export function DynamicStepSection({
   if (resources.length === 0) return null
 
   return (
-    <div className="w-full max-w-full mx-auto px-6 py-8">
+    <div className="w-full max-w-full mx-auto px-6 pt-8">
       <div className="mb-10">
         <div className="mb-4 flex items-center gap-6">
           <div className="flex items-center gap-4">
