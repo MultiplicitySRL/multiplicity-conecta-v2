@@ -14,6 +14,7 @@ import { DynamicStepSection } from "@/components/dynamic-step-section"
 import { DynamicSection } from "@/components/dynamic-section"
 import { DynamicResourceCard } from "@/components/dynamic-resource-card"
 import { Card } from "@/components/ui/card"
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { Calendar } from "lucide-react"
 import Image from "next/image"
 import type { ResourceV3 } from "@/lib/resources-cms-v3"
@@ -121,6 +122,20 @@ export default function ClientesPageDynamic() {
   const valoracionSection = res.find((r) => r.seccion.includes("Valoración") && isSection(r))
   const investigacionResources = res.filter((r) => r.seccion.includes("Investigaciones") && !isSection(r))
   const investigacionSection = res.find((r) => r.seccion.includes("Investigaciones") && isSection(r))
+
+  // Imagen de banner para el Tour General (si existe en el CSV)
+  const tourGeneralImageIsExternal = tourGeneral?.imagen?.startsWith("http") ?? false
+  const tourGeneralImageSrc = tourGeneral?.imagen
+    ? (() => {
+        const baseUrl = tourGeneral.imagen
+        if (!tourGeneralImageIsExternal) return baseUrl
+        const separator = baseUrl.includes("?") ? "&" : "?"
+        return `${baseUrl}${separator}v=${tourGeneral.orden}`
+      })()
+    : "/placeholder.svg"
+
+  // Controla el modal de video del Tour General
+  const [tourVideoOpen, setTourVideoOpen] = useState(false)
 
   // Navegación del sidebar generada desde el contenido dinámico (CMS) — useMemo debe ir antes de cualquier return
   const sidebarNavItems: NavItem[] = useMemo(() => {
@@ -372,9 +387,10 @@ export default function ClientesPageDynamic() {
 
               {/* Tour General */}
               {tourGeneral && (
-                <div id="tour-general" className="mb-6">
-                  <Card className="overflow-hidden rounded-2xl border-0 bg-white shadow-lg">
-                    <div className="grid md:grid-cols-2">
+                <>
+                  <div id="tour-general" className="">
+                    <Card className="overflow-hidden rounded-2xl border-0 bg-white shadow-lg p-0">
+                      <div className="grid md:grid-cols-2">
                       <div className="p-4 flex flex-col justify-center bg-white">
                         <h3 className="text-2xl font-bold" style={{ color: "#E11383" }}>
                           {tourGeneral.titulo}
@@ -384,18 +400,66 @@ export default function ClientesPageDynamic() {
                         )}
                       </div>
 
-                      <div className="relative aspect-[16/8] bg-black">
-                        <iframe
-                          src={getYouTubeEmbedUrl(tourGeneral.url_video_youtube)}
-                          title={tourGeneral.titulo}
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                          allowFullScreen
-                          className="absolute inset-0 w-full h-full"
-                        />
+                      <div className="flex flex-col">
+                        <button
+                          type="button"
+                          className="relative aspect-[16/8] bg-black w-full group"
+                          onClick={() => {
+                            if (tourGeneral.url_video_youtube) {
+                              setTourVideoOpen(true)
+                            }
+                          }}
+                        >
+                          {tourGeneral.imagen ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={tourGeneralImageSrc}
+                              alt={tourGeneral.titulo}
+                              className="w-full h-full object-cover"
+                              crossOrigin={tourGeneralImageIsExternal ? "anonymous" : undefined}
+                            />
+                          ) : (
+                            <iframe
+                              src={getYouTubeEmbedUrl(tourGeneral.url_video_youtube)}
+                              title={tourGeneral.titulo}
+                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                              allowFullScreen
+                              className="absolute inset-0 w-full h-full"
+                            />
+                          )}
+                        </button>
+                        {tourGeneral.url_video_youtube && tourGeneral.texto_boton && (
+                          <button
+                            type="button"
+                            className="w-full px-5 py-2.5 text-sm font-semibold text-white"
+                            style={{ backgroundColor: "#E11383", borderBottomLeftRadius: "0.75rem", borderBottomRightRadius: "0.75rem" }}
+                            onClick={() => setTourVideoOpen(true)}
+                          >
+                            {tourGeneral.texto_boton}
+                          </button>
+                        )}
                       </div>
-                    </div>
-                  </Card>
-                </div>
+                      </div>
+                    </Card>
+                  </div>
+
+                  {tourGeneral.url_video_youtube && (
+                    <Dialog open={tourVideoOpen} onOpenChange={setTourVideoOpen}>
+                      <DialogContent className="max-w-[90vw] w-full sm:max-w-4xl p-0 gap-0 overflow-hidden rounded-xl border-0 bg-black">
+                        <DialogTitle className="sr-only">{tourGeneral.titulo}</DialogTitle>
+                        <div className="relative w-full aspect-video">
+                          <iframe
+                            src={`${getYouTubeEmbedUrl(tourGeneral.url_video_youtube)}?autoplay=1`}
+                            title={tourGeneral.titulo}
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                            className="absolute inset-0 w-full h-full"
+                          />
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  )}
+                </>
               )}
             </div>
           )}
