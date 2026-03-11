@@ -134,8 +134,21 @@ export default function ClientesPageDynamic() {
       })()
     : "/placeholder.svg"
 
+  // Imagen de banner para el Tutorial Administrativo
+  const tutorialAdminImageIsExternal = tutorialAdmin?.imagen?.startsWith("http") ?? false
+  const tutorialAdminImageSrc = tutorialAdmin?.imagen
+    ? (() => {
+        const baseUrl = tutorialAdmin.imagen
+        if (!tutorialAdminImageIsExternal) return baseUrl
+        const separator = baseUrl.includes("?") ? "&" : "?"
+        return `${baseUrl}${separator}v=${tutorialAdmin.orden}`
+      })()
+    : "/placeholder.svg"
+
   // Controla el modal de video del Tour General
   const [tourVideoOpen, setTourVideoOpen] = useState(false)
+  // Controla el modal de video del Tutorial Administrativo
+  const [tutorialVideoOpen, setTutorialVideoOpen] = useState(false)
 
   // Navegación del sidebar generada desde el contenido dinámico (CMS) — useMemo debe ir antes de cualquier return
   const sidebarNavItems: NavItem[] = useMemo(() => {
@@ -601,17 +614,64 @@ export default function ClientesPageDynamic() {
                     )}
                   </div>
 
-                  <div className="relative min-h-[200px] md:min-h-0 md:h-full w-full bg-black">
-                    <iframe
-                      src={getYouTubeEmbedUrl(tutorialAdmin.url_video_youtube)}
-                      title={tutorialAdmin.titulo}
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                      className="absolute inset-0 w-full h-full"
-                    />
+                  <div className="flex flex-col">
+                    <button
+                      type="button"
+                      className="relative aspect-[16/8] bg-black w-full group"
+                      onClick={() => {
+                        if (tutorialAdmin.url_video_youtube) {
+                          setTutorialVideoOpen(true)
+                        }
+                      }}
+                    >
+                      {tutorialAdmin.imagen ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={tutorialAdminImageSrc}
+                          alt={tutorialAdmin.titulo}
+                          className="w-full h-full object-cover"
+                          crossOrigin={tutorialAdminImageIsExternal ? "anonymous" : undefined}
+                        />
+                      ) : (
+                        <iframe
+                          src={getYouTubeEmbedUrl(tutorialAdmin.url_video_youtube)}
+                          title={tutorialAdmin.titulo}
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                          className="absolute inset-0 w-full h-full"
+                        />
+                      )}
+                    </button>
+                    {tutorialAdmin.url_video_youtube && (
+                      <button
+                        type="button"
+                        className="w-full px-5 py-2.5 text-sm font-semibold text-white"
+                        style={{ backgroundColor: "#E11383", borderBottomLeftRadius: "0.75rem", borderBottomRightRadius: "0.75rem" }}
+                        onClick={() => setTutorialVideoOpen(true)}
+                      >
+                        {tutorialAdmin.texto_boton || "Ver Video"}
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
+
+              {tutorialAdmin.url_video_youtube && (
+                <Dialog open={tutorialVideoOpen} onOpenChange={setTutorialVideoOpen}>
+                  <DialogContent className="max-w-[90vw] w-full sm:max-w-4xl p-0 gap-0 overflow-hidden rounded-xl border-0 bg-black">
+                    <DialogTitle className="sr-only">{tutorialAdmin.titulo}</DialogTitle>
+                    <div className="relative w-full aspect-video">
+                      <iframe
+                        src={`${getYouTubeEmbedUrl(tutorialAdmin.url_video_youtube)}?autoplay=1`}
+                        title={tutorialAdmin.titulo}
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                        className="absolute inset-0 w-full h-full"
+                      />
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              )}
             </div>
           )}
 
