@@ -1,0 +1,46 @@
+INSTRUCCIONES: Este archivo controla TODO el contenido de la página principal (landing page)
+
+CÓMO USAR:
+1. MOSTRAR: Cambia a NO para ocultar un ítem
+2. ORDEN: Cambia el número para reordenar (más bajo aparece primero)
+3. SECCIÓN: Agrupa ítems (usa el mismo nombre para agrupar)
+4. TIPO: Sección, Link, PDF, Video, Email, Decorativo
+5. URL ARCHIVO: Ruta interna o URL externa
+6. IMAGEN: Ruta de la imagen de portada
+7. COLOR: Color de la tarjeta (ej: pink, navy, red, orange, teal, decorativo)
+8. NOTAS: Para tu uso interno (no se muestra en el portal)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ID,MOSTRAR,ORDEN,SECCIÓN,SUBSECCIÓN,TÍTULO,DESCRIPCIÓN,TEXTO BOTÓN,TIPO,URL VIDEO (ID YouTube),URL ARCHIVO,IMAGEN,NOTAS,COLOR
+hero-section,SÍ,1,🏠 Hero,,Hero Principal,,,Sección,,,,Sección hero de la página principal,
+hero-about,SÍ,2,🏠 Hero,,Acerca de Multiplicity,,Acerca de Multiplicity,Link,,,/images/multiplicity-logo.png,Card que hace scroll a la sección About,pink
+hero-booking-1,SÍ,3,🏠 Hero,,Agenda una reunión,,Agenda una reunión,Link,,https://calendly.com/multiplicity-info/30min,/images/agendaunareu.jpg,Card con imagen de fondo que abre Calendly,imagen
+hero-faq,SÍ,4,🏠 Hero,,Preguntas frecuentes,,Preguntas frecuentes,Link,,,/images/agendaunareu.jpg,Card que hace scroll a la sección FAQ,pink-light
+hero-que-quieres,SÍ,5,🏠 Hero,,¿QUÉ QUIERES CONOCER?,,¿QUÉ QUIERES CONOCER?,Decorativo,,,,Card decorativa roja con flecha,red
+hero-business,SÍ,6,🏠 Hero,,Nuestro Modelo de Negocios,,Nuestro Modelo de Negocios,Link,,,/images/nuestro-modelo-de-negocios.jpeg,Card que hace scroll a la sección Business Model,navy
+hero-reports,SÍ,7,🏠 Hero,,Reportes de Evaluación,,Reportes de Evaluación,Link,,,/images/presentacion-20de-20servicios-20-281-29.jpeg,Card que hace scroll a la sección Reports,orange
+hero-booking-2,SÍ,8,🏠 Hero,,Agenda una reunión con un Asesor,,Agenda una reunión con un Asesor,Link,,https://calendly.com/multiplicity-info/30min,,Card que abre Calendly,teal
+about-section,SÍ,10,📖 Acerca de,,Acerca de Multiplicity,,,Sección,,,,Sección header de About,
+about-presentacion,SÍ,11,📖 Acerca de,,Nuestra Presentación de Servicios,,Ver Documento,PDF,,/documentos/Presentacion de Servicios Multiplicity.pdf,/images/presentacion-20de-20servicios-20-281-29.jpeg,,
+about-video,SÍ,12,📖 Acerca de,,Vídeo Acerca de Multiplicity,,Ver Vídeo,Video,zaPCA2Ka6Pc,,/images/video-20acerca-20multiplicity-20-281-29.jpeg,,
+about-tendencias,SÍ,13,📖 Acerca de,,Índices y Tendencias,,Ver Imagen,Link,,/indices-y-tendencias.jpg,/indices-y-tendencias.jpg,,
+about-cartera,SÍ,14,📖 Acerca de,,Nuestra Cartera de Clientes,,Ver Documento,PDF,,/documentos/Cartera de Clientes Multiplicity.pdf,/images/nuestra-cartera-de-clientes.jpg,,
+business-section,SÍ,20,💼 Modelo de Negocios,,Modelo de Negocios,,,Sección,,,,Sección header de Business Model,
+business-doc,SÍ,21,💼 Modelo de Negocios,,Nuestro Modelo de Negocios,,Ver Documento,PDF,,/documentos/Modelo de Negocios Multiplicity.pdf,/images/nuestro-modelo-de-negocios.jpeg,,
+business-cotizar,SÍ,22,💼 Modelo de Negocios,,Cotiza con nosotros,,Cotizar,Link,,/cotizar,/images/cotizador-calculadora.jpeg,,
+reports-section,SÍ,30,📊 Reportes,,Reportes de Evaluación,,,Sección,,,,Sección header de Reports,
+reports-video,SÍ,31,📊 Reportes,,Vídeo explicativo acerca de la utilidad de cada reporte,,Ver Vídeo,Link,,https://drive.google.com/file/d/1-wMmLfcbCymr6V0XfrfD9pIdFBJEOXw3/view,/global-education.jpeg,,
+reports-plus-ideal,SÍ,32,📊 Reportes,Reportes Individuales Plus,Con Nivel Ideal,Recomendado para selección con perfil definido,Ver Reporte,PDF,,/documentos/reportes/Informe con nivel ideal.pdf,,,teal
+reports-plus-sin-ideal,SÍ,33,📊 Reportes,Reportes Individuales Plus,Sin Nivel Ideal,Para evaluación general de talentos,Ver Reporte,PDF,,/documentos/reportes/Informe sin nivel ideal.pdf,,,teal
+reports-plus-resumen,SÍ,34,📊 Reportes,Reportes Individuales Plus,Resumen,Resumen ejecutivo para decisiones rápidas,Ver Reporte,PDF,,/documentos/reportes/Informe resumen con nivel ideal.pdf,,,teal
+reports-plus-participante,SÍ,35,📊 Reportes,Reportes Individuales Plus,Para el Participante,Reporte personalizado para el candidato,Ver Reporte,PDF,,/documentos/reportes/Informe participante con nivel ideal.pdf,,,teal
+reports-basico,SÍ,36,📊 Reportes,Reporte Individual Básico,Reporte Individual Básico,Evaluación estándar con métricas esenciales,Ver Reporte,PDF,,/documentos/reportes/Informe básico de competencias y razonamiento general.pdf,,,orange
+reports-grupal,SÍ,37,📊 Reportes,Reporte Grupal,Reporte Grupal,"Análisis comparativo de múltiples candidatos (disponible para todas las versiones)",Ver Reporte,Link,,https://docs.google.com/spreadsheets/d/12UhVE8B5bnvDgwFpxXSJ4HqIUx7ZWqig/edit?usp=sharing&ouid=116100766788526348199&rtpof=true&sd=true,,,navy
+demo-section,SÍ,40,🎯 Demo,,¿Quieres solicitar un demo?,"Prueba Multiplicity y descubre cómo puede ayudarte a colocar a las personas correctas en los puestos correctos y a conocer todo su potencial.",Solicitar demo,Sección,,,,/images/quieressolicitardemo.png,Sección de demo con formulario,
+demo-paso-1,SÍ,41,🎯 Demo,,Primer paso,Selecciona a los candidatos para evaluar,,Decorativo,,,,Paso 1 del demo,
+demo-paso-2,SÍ,42,🎯 Demo,,Segundo paso,Recibe los reportes,,Decorativo,,,,Paso 2 del demo,
+demo-paso-3,SÍ,43,🎯 Demo,,Tercer paso,Agenda tu sesión con un asesor para interpretar tus reportes,,Decorativo,,,,Paso 3 del demo,
+booking-section,SÍ,50,📅 Booking,,Agenda una reunión con un asesor,,Programar reunión,Link,,https://calendly.com/multiplicity-info/30min,,Sección de booking con botón Calendly,
+footer-section,SÍ,60,🔗 Footer,,Contacto,,,Sección,,,,Footer de la página,
+footer-email,SÍ,61,🔗 Footer,,info@multiplicity.com.do,,Escribir correo,Email,,mailto:info@multiplicity.com.do,,Email de contacto del footer,

@@ -1,29 +1,19 @@
 import { Suspense } from "react"
-import { HeroSection } from "@/components/hero-section"
-import { AboutSection } from "@/components/about-section"
-import { BusinessModelSection } from "@/components/business-model-section"
-import { ReportsSection } from "@/components/reports-section"
-import { DemoSection } from "@/components/demo-section"
-import { FAQSection } from "@/components/faq-section"
-import { BookingSection } from "@/components/booking-section"
-import { Footer } from "@/components/footer"
-import { AccessGate } from "@/components/access-gate"
+import HomePageDynamic from "./page-dynamic"
 
 export default function Home() {
   return (
-    <Suspense>
-      <AccessGate>
-        <main className="min-h-screen">
-          <HeroSection />
-          <AboutSection />
-          <BusinessModelSection />
-          <ReportsSection />
-          <DemoSection />
-          {/* <FAQSection /> */}
-          <BookingSection />
-          <Footer />
+    <Suspense
+      fallback={
+        <main className="min-h-screen flex items-center justify-center bg-background">
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-10 h-10 border-4 border-[#E11383] border-t-transparent rounded-full animate-spin" />
+            <p className="text-navy font-medium">Cargando...</p>
+          </div>
         </main>
-      </AccessGate>
+      }
+    >
+      <HomePageDynamic />
     </Suspense>
   )
 }
