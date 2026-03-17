@@ -110,6 +110,39 @@ export default function ScenarioCard({
   const [direction, setDirection] = useState(1) // 1 = forward, -1 = backward
   const [returnToReview, setReturnToReview] = useState(false)
 
+  const getTipoNCFId = (tipoNCF: string): string | null => {
+    switch (tipoNCF) {
+      case "Crédito Fiscal":
+        return "1"
+      case "Consumo":
+        return "2"
+      case "Gubernamental":
+        return "4"
+      case "Régimen Especial de Tributación":
+        return "3"
+      default:
+        return null
+    }
+  }
+
+  useEffect(() => {
+    // NCF depende del tipo de empresa:
+    // - Internacional: solo "Consumo" (y debe quedar seleccionado por defecto)
+    // - Local: opciones fiscales; si venía "Consumo" por un cambio previo, lo movemos a "Crédito Fiscal"
+    if (companyType === "international") {
+      if (formData.tipoNCF !== "Consumo") {
+        setFormData((prev) => ({ ...prev, tipoNCF: "Consumo" }))
+      }
+      return
+    }
+
+    // companyType === "local"
+    const allowedLocal = ["Crédito Fiscal", "Gubernamental", "Régimen Especial de Tributación"]
+    if (!formData.tipoNCF || !allowedLocal.includes(formData.tipoNCF)) {
+      setFormData((prev) => ({ ...prev, tipoNCF: "Crédito Fiscal" }))
+    }
+  }, [companyType, formData.tipoNCF])
+
   const isValidEmail = (email: string): boolean => {
     if (!email) return false
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
@@ -196,10 +229,25 @@ export default function ScenarioCard({
     ["competenciasBasicas", "razonamientoGeneral"].includes(test.key),
   )
 
+  const getRncError = (rawValue: string): string | null => {
+    const value = rawValue.trim()
+    if (!value) return "Este campo es obligatorio."
+
+    if (companyType === "local") {
+      if (!/^\d{9}$/.test(value)) return "Debe contener exactamente 9 dígitos."
+      return null
+    }
+
+    // companyType === "international"
+    if (!/^\d{1,25}$/.test(value)) return "Debe contener solo dígitos (máximo 25)."
+    return null
+  }
+
   const validateStep1 = () => {
     const newErrors: Record<string, string> = {}
     if (!formData.razonSocial) newErrors.razonSocial = "Este campo es obligatorio."
-    if (!formData.rnc) newErrors.rnc = "Este campo es obligatorio."
+    const rncError = getRncError(formData.rnc)
+    if (rncError) newErrors.rnc = rncError
     if (!formData.direccion) newErrors.direccion = "Este campo es obligatorio."
     if (!formData.tipoNCF) newErrors.tipoNCF = "Selecciona una opción."
     if (!formData.medioEntrega) newErrors.medioEntrega = "Selecciona una opción."
@@ -266,7 +314,8 @@ export default function ScenarioCard({
     if (currentStep === 1) {
       // Step 1 validation
       if (!formData.razonSocial) newErrors.razonSocial = "Campo requerido"
-      if (!formData.rnc) newErrors.rnc = "Campo requerido"
+      const rncError = getRncError(formData.rnc)
+      if (rncError) newErrors.rnc = rncError
       if (!formData.direccion) newErrors.direccion = "Campo requerido"
       if (!formData.tipoNCF) newErrors.tipoNCF = "Debe seleccionar un tipo de NCF"
       if (!formData.medioEntrega) newErrors.medioEntrega = "Debe seleccionar un medio de entrega"
@@ -385,6 +434,7 @@ Responsabilidades de Multiplicity:
     }
 
     const alegraInvoicePayload = buildInvoicePayload(alegraInput, 0)
+    const tipoNCFId = getTipoNCFId(formData.tipoNCF)
 
     const payload: Record<string, unknown> = {
       scenarioId: scenario.id,
@@ -1235,6 +1285,8 @@ Responsabilidades de Multiplicity:
                                       value={formData.rnc}
                                       onChange={(e) => updateFormData("rnc", e.target.value)}
                                       placeholder="Ej: 123456789"
+                                      inputMode="numeric"
+                                      maxLength={companyType === "local" ? 9 : 25}
                                       className={`h-12 border-2 focus:ring-2 focus:ring-[#4DB8B8]/20 focus:border-[#4DB8B8] transition-all ${errors.rnc ? "border-red-500" : ""}`}
                                     />
                                     {errors.rnc && (

@@ -126,7 +126,7 @@ interface DirectQuoteCalculatorProps {
 export default function DirectQuoteCalculator({ companyId, accountId, onSuccess }: DirectQuoteCalculatorProps) {
   const [showDetailsDialog, setShowDetailsDialog] = useState(false)
   const [currency, setCurrency] = useState("USD")
-  const [exchangeRateUSD] = useState(63.9204)
+  const [exchangeRateUSD] = useState(59.8694)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string>("")
   const [isSuccess, setIsSuccess] = useState(false)

@@ -132,9 +132,9 @@ export default function QuoteCalculator() {
   const [selectedScenario, setSelectedScenario] = useState<number | null>(null)
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [currency, setCurrency] = useState("USD")
-  const [exchangeRateUSD] = useState(63.9204)
-  const [exchangeRateEUR] = useState(74.3778)
-  const [companyType, setCompanyType] = useState<"local" | "international">("local")
+  const [exchangeRateUSD] = useState(59.8694)
+  const [exchangeRateEUR] = useState(68.7181)
+  const [companyType, setCompanyType] = useState<"local" | "international" | null>(null)
   const [regenerationCount, setRegenerationCount] = useState(0)
 
   const step1Ref = useRef<HTMLDivElement>(null)
@@ -225,10 +225,20 @@ export default function QuoteCalculator() {
       console.log("[v0] Company type changed to local with EUR selected, switching to USD")
       setCurrency("USD")
     }
+    if (companyType === "international" && currency === "DOP") {
+      console.log("[v0] Company type changed to international with DOP selected, switching to USD")
+      setCurrency("USD")
+    }
   }, [companyType, currency])
 
+  useEffect(() => {
+    if (isSubmitted) {
+      window.scrollTo({ top: 0, behavior: "smooth" })
+    }
+  }, [isSubmitted])
+
   const handleConsultQuote = async () => {
-    if (!hasData) return
+    if (!hasData || !companyType) return
 
     console.log("[v0] Clearing selected scenario, current value:", selectedScenario)
     setSelectedScenario(null)
@@ -277,8 +287,6 @@ export default function QuoteCalculator() {
     if (typeof scenarioId === "number") handleSelectScenario(scenarioId)
   }
 
-  const selectedScenarioData = scenarios.find((s) => s.id === selectedScenario)
-
   const StepIndicator = ({ step, isActive }: { step: number; isActive: boolean }) => (
     <div
       className={`flex items-center justify-center w-10 h-10 rounded-full text-sm font-semibold transition-all ${
@@ -295,25 +303,21 @@ export default function QuoteCalculator() {
 
   if (isSubmitted) {
     return (
-      <div className="max-w-2xl mx-auto text-center py-12">
-        <div className="mb-6 flex justify-center">
+      <div className="max-w-2xl mx-auto text-center py-14 px-4">
+        <div className="mb-8 flex justify-center">
           <div className="relative">
             <div className="absolute inset-0 bg-green-500/20 rounded-full animate-ping" />
-            <div className="relative bg-green-500 text-white rounded-full p-6">
+            <div className="relative bg-green-500 text-white rounded-full p-6 shadow-xl">
               <CheckCircle2 className="h-16 w-16" />
             </div>
           </div>
         </div>
-        <h2 className="text-3xl font-bold text-foreground mb-3">¡Solicitud Procesada Exitosamente!</h2>
-        <p className="text-muted-foreground text-lg mb-6">
-          Hemos recibido tu solicitud de cotización. Te enviaremos una confirmación por email con todos los detalles.
-        </p>
-        <div className="bg-muted/50 rounded-lg p-6 text-left space-y-2">
-          <p className="text-sm">
-            <span className="font-semibold">Escenario seleccionado:</span> {selectedScenarioData?.title}
-          </p>
-          <p className="text-sm">
-            <span className="font-semibold">Total de personas:</span> {totalPersonnel}
+        <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-3">¡Solicitud procesada exitosamente!</h2>
+        <div className="mx-auto max-w-xl">
+          <p className="text-muted-foreground text-base md:text-lg leading-relaxed">
+            Hemos recibido tu solicitud de cotización.
+            <br className="hidden sm:block" />
+            Te enviaremos una confirmación por email con todos los detalles.
           </p>
         </div>
         <Button
@@ -324,7 +328,7 @@ export default function QuoteCalculator() {
             setDirectivos("")
             setProfesionales("")
             setTecnicos("")
-            setCompanyType("local")
+            setCompanyType(null)
           }}
           className="mt-6"
         >
@@ -456,7 +460,7 @@ export default function QuoteCalculator() {
                 <div className="pt-3">
                   <Button
                     onClick={handleConsultQuote}
-                    disabled={!hasData || isLoading}
+                    disabled={!hasData || !companyType || isLoading}
                     className="w-full h-12 sm:h-14 text-sm sm:text-base font-semibold shadow-lg hover:shadow-xl transition-all"
                     size="lg"
                   >
@@ -497,7 +501,7 @@ export default function QuoteCalculator() {
       </div>
 
       {/* STEP 2: Choose scenario */}
-      {currentStep >= 2 && (
+      {currentStep >= 2 && companyType && (
         <div ref={step2Ref} className="relative">
           <Card
             className={`shadow-md transition-all duration-300 ${currentStep === 2 ? "ring-2 ring-primary/50 shadow-xl" : "opacity-90"}`}
@@ -522,9 +526,17 @@ export default function QuoteCalculator() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="USD">💵 USD</SelectItem>
-                        <SelectItem value="DOP">🇩🇴 DOP</SelectItem>
-                        {companyType === "international" && <SelectItem value="EUR">💶 EUR</SelectItem>}
+                        {companyType === "international" ? (
+                          <>
+                            <SelectItem value="USD">💵 USD</SelectItem>
+                            <SelectItem value="EUR">💶 EUR</SelectItem>
+                          </>
+                        ) : (
+                          <>
+                            <SelectItem value="USD">💵 USD</SelectItem>
+                            <SelectItem value="DOP">🇩🇴 DOP</SelectItem>
+                          </>
+                        )}
                       </SelectContent>
                     </Select>
                   </div>
