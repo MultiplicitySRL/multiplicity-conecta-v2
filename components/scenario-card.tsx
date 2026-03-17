@@ -444,6 +444,7 @@ Responsabilidades de Multiplicity:
       scenarioTests: scenario.tests,
       currency,
       companyType,
+      tipoNCFId,
       calculations: {
         subtotalWithoutDiscount: calculations.subtotalWithoutDiscount,
         totalDiscountAmount: calculations.totalDiscountAmount,
@@ -454,7 +455,7 @@ Responsabilidades de Multiplicity:
         symbol: calculations.symbol,
         totalTests: calculations.totalTests,
       },
-      formData: { ...formData },
+      formData: { ...formData, tipoNCFId },
       alegraInvoicePayload,
     }
     onFormComplete?.(payload)
@@ -1333,10 +1334,26 @@ Responsabilidades de Multiplicity:
                                     onValueChange={(value) => updateFormData("tipoNCF", value)}
                                   >
                                     <div className="space-y-2">
-                                      {[
-                                        { value: "Crédito Fiscal", label: "Crédito Fiscal", desc: "Para empresas con NCF" },
-                                        { value: "Consumo", label: "Consumo", desc: "Factura simplificada" },
-                                      ].map((option) => (
+                                      {(companyType === "international"
+                                        ? [{ value: "Consumo", label: "Consumo", desc: "Factura simplificada" }]
+                                        : [
+                                            {
+                                              value: "Crédito Fiscal",
+                                              label: "Crédito Fiscal",
+                                              desc: "Para contribuyentes que requieren crédito fiscal",
+                                            },
+                                            {
+                                              value: "Gubernamental",
+                                              label: "Gubernamental",
+                                              desc: "Para entidades del gobierno",
+                                            },
+                                            {
+                                              value: "Régimen Especial de Tributación",
+                                              label: "Régimen Especial de Tributación",
+                                              desc: "Para contribuyentes en regímenes especiales",
+                                            },
+                                          ]
+                                      ).map((option) => (
                                         <label
                                           key={option.value}
                                           className={`
