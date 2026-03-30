@@ -15,6 +15,7 @@ type AlegraClientInfo = {
   name: string
   email?: string | null
   defaultInvoiceResolution?: string | null
+  country?: string | null
 }
 
 type AlegraInvoice = {
@@ -65,6 +66,7 @@ function CotizarPorPruebasContent() {
   const invoiceClientId = companyId ?? accountId
 
   const [clientInfo, setClientInfo] = useState<AlegraClientInfo | null>(null)
+  const [isLoadingClientInfo, setIsLoadingClientInfo] = useState(false)
 
   const [invoices, setInvoices] = useState<AlegraInvoice[] | null>(null)
   const [isLoadingInvoices, setIsLoadingInvoices] = useState(false)
@@ -76,6 +78,7 @@ function CotizarPorPruebasContent() {
   useEffect(() => {
     if (!companyId) return
     const controller = new AbortController()
+    setIsLoadingClientInfo(true)
     const url = new URL("https://n8n.srv1464241.hstgr.cloud/webhook/22557e2d-6273-4070-9332-ab34dc412d86")
     url.searchParams.set("client_id", companyId)
     fetch(url.toString(), { method: "GET", signal: controller.signal })
@@ -87,10 +90,12 @@ function CotizarPorPruebasContent() {
             name: data.name,
             email: data.email,
             defaultInvoiceResolution: data.defaultInvoiceResolution ?? null,
+            country: data.address?.country ?? null,
           })
         }
       })
-      .catch(() => {})
+      .catch((err) => { if (err?.name !== "AbortError") setIsLoadingClientInfo(false) })
+      .finally(() => setIsLoadingClientInfo(false))
     return () => controller.abort()
   }, [companyId])
 
@@ -193,12 +198,20 @@ function CotizarPorPruebasContent() {
       <div className="container mx-auto px-3 sm:px-4 py-6 md:py-8 lg:py-10">
         <div className="max-w-6xl mx-auto grid gap-6 lg:gap-10 lg:grid-cols-[minmax(0,3fr)_minmax(0,1.25fr)] items-start">
           <section className="space-y-3">
-            <DirectQuoteCalculator
-              companyId={companyId}
-              accountId={accountId}
-              invoiceResolution={clientInfo?.defaultInvoiceResolution ?? null}
-              onSuccess={() => void fetchInvoices()}
-            />
+            {companyId && isLoadingClientInfo ? (
+              <div className="flex flex-col items-center justify-center gap-3 py-20 text-muted-foreground">
+                <Loader2 className="h-8 w-8 animate-spin text-[#00BCB4]" />
+                <p className="text-sm font-medium">Cargando información del cliente...</p>
+              </div>
+            ) : (
+              <DirectQuoteCalculator
+                companyId={companyId}
+                accountId={accountId}
+                invoiceResolution={clientInfo?.defaultInvoiceResolution ?? null}
+                clientCountry={clientInfo?.country ?? null}
+                onSuccess={() => void fetchInvoices()}
+              />
+            )}
           </section>
 
           {invoiceClientId && (

@@ -43,16 +43,23 @@ const DEFAULT_EXCHANGE_RATE = 61.0416
  */
 export function buildInvoicePayload(input: CreateInvoiceInput, contactId: number) {
   const currencyCode = input.currency ?? "USD"
-  const includeCurrency = currencyCode !== "DOP"
+
+  // DOP → Alegra lo maneja como moneda local, no se envía el campo currency
+  // USD → moneda base de Alegra, se envía solo el code sin exchangeRate
+  // EUR (u otra) → se envía code + exchangeRate obligatorio
+  const currencyField =
+    currencyCode === "DOP"
+      ? {}
+      : currencyCode === "USD"
+        ? { currency: { code: "USD", exchangeRate: input.exchangeRate ?? DEFAULT_EXCHANGE_RATE } }
+        : { currency: { code: currencyCode, exchangeRate: input.exchangeRate ?? DEFAULT_EXCHANGE_RATE } }
 
   return {
     client: { id: contactId },
     date: input.issueDate,
     dueDate: input.dueDate,
     status: "draft",
-    ...(includeCurrency
-      ? { currency: { code: currencyCode, exchangeRate: input.exchangeRate ?? DEFAULT_EXCHANGE_RATE } }
-      : {}),
+    ...currencyField,
     items: input.items.map((it) => ({
       ...(it.id != null ? { id: it.id } : { name: it.name }),
       price: round2(it.price),
@@ -62,8 +69,9 @@ export function buildInvoicePayload(input: CreateInvoiceInput, contactId: number
         ? { tax: [{ id: "1" }] }
         : {}),
     })),
-    ...(input.notes ? { observations: input.notes } : {}),
-    ...(input.terms ? { termsConditions: input.terms } : {}),
-    ...(input.externalRef ? { anotation: input.externalRef } : {}),
+    ...(input.notes ? { observations: "" } : {}),
+    ...(input.terms ? { termsConditions: "" } : {}),
+    ...(input.externalRef ? { anotation: "" } : {}),
   }
+  
 }
