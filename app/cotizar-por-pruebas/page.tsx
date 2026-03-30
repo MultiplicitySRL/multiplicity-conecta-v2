@@ -10,6 +10,13 @@ import { BlockedAccessScreen } from "@/components/blocked-access-screen"
 import { Loader2 } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
+type AlegraClientInfo = {
+  id: string
+  name: string
+  email?: string | null
+  defaultInvoiceResolution?: string | null
+}
+
 type AlegraInvoice = {
   id: string
   date: string
@@ -57,12 +64,35 @@ function CotizarPorPruebasContent() {
   const accountId = searchParams.get("account_id")
   const invoiceClientId = companyId ?? accountId
 
+  const [clientInfo, setClientInfo] = useState<AlegraClientInfo | null>(null)
+
   const [invoices, setInvoices] = useState<AlegraInvoice[] | null>(null)
   const [isLoadingInvoices, setIsLoadingInvoices] = useState(false)
   const [invoicesError, setInvoicesError] = useState<string | null>(null)
   const [selectedInvoice, setSelectedInvoice] = useState<AlegraInvoice | null>(null)
   const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false)
   const [visiblePendingInvoicesCount, setVisiblePendingInvoicesCount] = useState(5)
+
+  useEffect(() => {
+    if (!companyId) return
+    const controller = new AbortController()
+    const url = new URL("https://n8n.srv1464241.hstgr.cloud/webhook/22557e2d-6273-4070-9332-ab34dc412d86")
+    url.searchParams.set("client_id", companyId)
+    fetch(url.toString(), { method: "GET", signal: controller.signal })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data) {
+          setClientInfo({
+            id: data.id,
+            name: data.name,
+            email: data.email,
+            defaultInvoiceResolution: data.defaultInvoiceResolution ?? null,
+          })
+        }
+      })
+      .catch(() => {})
+    return () => controller.abort()
+  }, [companyId])
 
   const fetchInvoices = useCallback(async (signal?: AbortSignal) => {
     if (!invoiceClientId) return
@@ -166,6 +196,7 @@ function CotizarPorPruebasContent() {
             <DirectQuoteCalculator
               companyId={companyId}
               accountId={accountId}
+              invoiceResolution={clientInfo?.defaultInvoiceResolution ?? null}
               onSuccess={() => void fetchInvoices()}
             />
           </section>

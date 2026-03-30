@@ -35,39 +35,35 @@ export type CreateInvoiceInput = {
   companyType?: "local" | "international"
 }
 
-const DEFAULT_EXCHANGE_RATE = 59.8694
+const DEFAULT_EXCHANGE_RATE = 61.0416
 
 /**
  * Construye el payload para crear una factura en Alegra.
  * @param contactId - ID del contacto en Alegra (en frontend puede ser 0; el backend lo sustituye tras crear el contacto)
  */
 export function buildInvoicePayload(input: CreateInvoiceInput, contactId: number) {
+  const currencyCode = input.currency ?? "USD"
+  const includeCurrency = currencyCode !== "DOP"
+
   return {
     client: { id: contactId },
     date: input.issueDate,
     dueDate: input.dueDate,
     status: "draft",
-    currency: {
-      code: "USD",
-      exchangeRate: input.exchangeRate ?? DEFAULT_EXCHANGE_RATE,
-    },
+    ...(includeCurrency
+      ? { currency: { code: currencyCode, exchangeRate: input.exchangeRate ?? DEFAULT_EXCHANGE_RATE } }
+      : {}),
     items: input.items.map((it) => ({
       ...(it.id != null ? { id: it.id } : { name: it.name }),
       price: round2(it.price),
       quantity: it.quantity,
       ...(it.discount != null ? { discount: round2(it.discount) } : {}),
       ...(input.companyType === "local"
-        ? {
-            tax: [
-              {
-                id: "1",
-              },
-            ],
-          }
+        ? { tax: [{ id: "1" }] }
         : {}),
     })),
-    ...(input.notes ? { observations: "" } : {}),
-    ...(input.terms ? { termsConditions: "" } : {}),
-    ...(input.externalRef ? { anotation: "" } : {}),
+    ...(input.notes ? { observations: input.notes } : {}),
+    ...(input.terms ? { termsConditions: input.terms } : {}),
+    ...(input.externalRef ? { anotation: input.externalRef } : {}),
   }
 }

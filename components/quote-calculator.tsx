@@ -132,8 +132,8 @@ export default function QuoteCalculator() {
   const [selectedScenario, setSelectedScenario] = useState<number | null>(null)
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [currency, setCurrency] = useState("USD")
-  const [exchangeRateUSD] = useState(59.8694)
-  const [exchangeRateEUR] = useState(68.7181)
+  const [exchangeRateUSD] = useState(61.0416)
+  const [exchangeRateEUR] = useState(68.8030)
   const [companyType, setCompanyType] = useState<"local" | "international" | null>(null)
   const [regenerationCount, setRegenerationCount] = useState(0)
 

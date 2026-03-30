@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Sparkles, CheckCircle2, Loader2, AlertCircle } from "lucide-react"
+import { Sparkles, CheckCircle2, Loader2, AlertCircle, Download, Info } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { buildInvoicePayload } from "@/lib/alegra-invoice-payload"
 import type { CreateInvoiceInput } from "@/lib/alegra-invoice-payload"
@@ -120,13 +120,41 @@ const ITBIS_RATE = 0.18
 interface DirectQuoteCalculatorProps {
   companyId: string | null
   accountId: string | null
+  invoiceResolution?: string | null
   onSuccess?: () => void
 }
 
-export default function DirectQuoteCalculator({ companyId, accountId, onSuccess }: DirectQuoteCalculatorProps) {
+/**
+ * Resolución 2 → USD + EUR
+ * Resolución 1 o 3 → DOP + USD (factura siempre en USD)
+ * Resolución 4 → USD + DOP (factura en moneda seleccionada)
+ * Sin resolución / default → USD + DOP
+ */
+function getCurrencyOptions(resolution: string | null | undefined): { value: string; label: string }[] {
+  if (resolution === "2") {
+    return [
+      { value: "USD", label: "💵 USD" },
+      { value: "EUR", label: "💶 EUR" },
+    ]
+  }
+  if (resolution === "1" || resolution === "3") {
+    return [
+      { value: "DOP", label: "🇩🇴 DOP" },
+      { value: "USD", label: "💵 USD" },
+    ]
+  }
+  // resolution === "4" o sin resolución
+  return [
+    { value: "USD", label: "💵 USD" },
+    { value: "DOP", label: "🇩🇴 DOP" },
+  ]
+}
+
+export default function DirectQuoteCalculator({ companyId, accountId, invoiceResolution, onSuccess }: DirectQuoteCalculatorProps) {
   const [showDetailsDialog, setShowDetailsDialog] = useState(false)
   const [currency, setCurrency] = useState("USD")
-  const [exchangeRateUSD] = useState(59.8694)
+  const [exchangeRateUSD] = useState(61.0416)
+  const [exchangeRateEUR] = useState(68.8030)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string>("")
   const [isSuccess, setIsSuccess] = useState(false)
@@ -185,7 +213,8 @@ export default function DirectQuoteCalculator({ companyId, accountId, onSuccess 
     const totalDiscountAmount = activeTests.reduce((sum, test) => sum + test.discountAmount, 0)
     const subtotalWithDiscount = activeTests.reduce((sum, test) => sum + test.totalWithDiscount, 0)
 
-    const itbisAmount = subtotalWithDiscount * ITBIS_RATE  // companyType siempre es "local" en cotización directa
+    const applyTax = invoiceResolution !== "4"
+    const itbisAmount = applyTax ? subtotalWithDiscount * ITBIS_RATE : 0
     const totalUSD = subtotalWithDiscount + itbisAmount
 
     let total = totalUSD
@@ -193,6 +222,9 @@ export default function DirectQuoteCalculator({ companyId, accountId, onSuccess 
     if (currency === "DOP") {
       total = totalUSD * exchangeRateUSD
       symbol = "RD$"
+    } else if (currency === "EUR") {
+      total = totalUSD * (exchangeRateUSD / exchangeRateEUR)
+      symbol = "€"
     }
 
     const totalTests = Object.values(tests).reduce((a, b) => a + b, 0)
@@ -204,22 +236,148 @@ export default function DirectQuoteCalculator({ companyId, accountId, onSuccess 
       totalDiscountAmount,
       subtotalWithDiscount,
       itbisAmount,
+      applyTax,
       totalUSD,
       total,
       symbol,
       totalTests,
     }
-  }, [testQuantities, currency, exchangeRateUSD, getPriceByVolumeMemoized])
+  }, [testQuantities, currency, exchangeRateUSD, exchangeRateEUR, invoiceResolution, getPriceByVolumeMemoized])
 
   const formatCurrency = (amount: number, symbol = "$") => {
     return `${symbol} ${amount.toLocaleString("es-DO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
   }
 
   const convertCurrency = (amountUSD: number): number => {
-    if (currency === "DOP") {
-      return amountUSD * exchangeRateUSD
-    }
+    if (currency === "DOP") return amountUSD * exchangeRateUSD
+    if (currency === "EUR") return amountUSD * (exchangeRateUSD / exchangeRateEUR)
     return amountUSD
+  }
+
+  const currencyOptions = getCurrencyOptions(invoiceResolution)
+
+  // Resolución 1 o 3: la factura siempre se emite en USD aunque se visualice en DOP
+  const showDopUsdNote = (invoiceResolution === "1" || invoiceResolution === "3") && currency === "DOP"
+
+  const handleExportPDF = () => {
+    if (typeof window === "undefined") return
+    const today = new Date()
+    const dateStr = today.toLocaleDateString("es-DO", { year: "numeric", month: "long", day: "numeric" })
+    const activeTests = calculations.testDetails.filter((t) => t.qty > 0)
+
+    const rows = activeTests.map((test) => `
+      <tr>
+        <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;">${test.name}</td>
+        <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;text-align:center;">${test.qty}</td>
+        <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;text-align:right;">${formatCurrency(convertCurrency(test.price), calculations.symbol)}</td>
+        <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;text-align:right;">${formatCurrency(convertCurrency(test.totalWithoutDiscount), calculations.symbol)}</td>
+        <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;text-align:right;color:#16a34a;">${test.hasDiscount ? formatCurrency(convertCurrency(test.discountAmount), calculations.symbol) : "-"}</td>
+        <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:600;">${formatCurrency(convertCurrency(test.totalWithDiscount), calculations.symbol)}</td>
+      </tr>
+    `).join("")
+
+    const dopNote = showDopUsdNote
+      ? `<div style="margin-top:12px;padding:10px 14px;background:#fef9c3;border:1px solid #fde047;border-radius:8px;font-size:12px;color:#854d0e;">
+          <strong>Nota:</strong> Los precios se muestran en DOP como referencia. La factura será emitida en USD.
+        </div>`
+      : ""
+
+    const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Cotización Multiplicity</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; font-size: 13px; color: #111827; background: #fff; padding: 32px; }
+    .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 28px; border-bottom: 2px solid #00BCB4; padding-bottom: 16px; }
+    .header-title { font-size: 22px; font-weight: 700; color: #00BCB4; }
+    .header-meta { text-align: right; font-size: 12px; color: #6b7280; }
+    table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+    thead tr { background: #2d1b69; color: #fff; }
+    thead th { padding: 8px 10px; text-align: left; font-size: 11px; }
+    thead th:not(:first-child) { text-align: right; }
+    thead th:nth-child(2) { text-align: center; }
+    tbody tr:hover { background: #f9fafb; }
+    .totals { margin-top: 16px; display: flex; justify-content: flex-end; }
+    .totals-table { width: 320px; border-collapse: collapse; }
+    .totals-table td { padding: 5px 10px; font-size: 13px; }
+    .totals-table .label { color: #6b7280; }
+    .totals-table .value { text-align: right; font-weight: 600; }
+    .totals-table .grand { font-size: 15px; font-weight: 700; border-top: 2px solid #111827; }
+    .footer { margin-top: 32px; font-size: 11px; color: #9ca3af; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <div class="header-title">Cotización de Pruebas</div>
+      <div style="font-size:12px;color:#6b7280;margin-top:4px;">Multiplicity</div>
+    </div>
+    <div class="header-meta">
+      <div><strong>Fecha:</strong> ${dateStr}</div>
+      <div><strong>Moneda:</strong> ${currency}</div>
+      ${companyId ? `<div><strong>Empresa ID:</strong> ${companyId}</div>` : ""}
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Prueba</th>
+        <th style="text-align:center;">Cantidad</th>
+        <th style="text-align:right;">Precio Base</th>
+        <th style="text-align:right;">Subtotal sin Desc.</th>
+        <th style="text-align:right;">Descuento</th>
+        <th style="text-align:right;">Total</th>
+      </tr>
+    </thead>
+    <tbody>${rows}</tbody>
+  </table>
+
+  <div class="totals">
+    <table class="totals-table">
+      <tr>
+        <td class="label">Subtotal con descuento</td>
+        <td class="value">${formatCurrency(convertCurrency(calculations.subtotalWithDiscount), calculations.symbol)}</td>
+      </tr>
+      <tr>
+        <td class="label">Descuento total</td>
+        <td class="value" style="color:#16a34a;">${formatCurrency(convertCurrency(calculations.totalDiscountAmount), calculations.symbol)}</td>
+      </tr>
+      ${calculations.applyTax ? `<tr>
+        <td class="label">ITBIS (18%)</td>
+        <td class="value">${formatCurrency(convertCurrency(calculations.itbisAmount), calculations.symbol)}</td>
+      </tr>` : ""}
+      <tr class="grand">
+        <td class="label grand">Total Neto</td>
+        <td class="value grand">${formatCurrency(calculations.total, calculations.symbol)}</td>
+      </tr>
+    </table>
+  </div>
+
+  ${dopNote}
+
+  <div class="footer">Este documento es una cotización referencial. Los precios están sujetos a confirmación.</div>
+</body>
+</html>`
+
+    const win = window.open("", "_blank", "width=900,height=700")
+    if (!win) return
+    win.document.write(html)
+    win.document.close()
+    win.focus()
+    setTimeout(() => {
+      win.print()
+    }, 400)
+  }
+
+  const clampQty = (value: string): string => {
+    if (value === "") return ""
+    const num = parseInt(value, 10)
+    if (isNaN(num) || num < 0) return "0"
+    if (num > 9999) return "9999"
+    return String(num)
   }
 
   const hasPlusTests = calculations.testDetails.some((test) =>
@@ -261,21 +419,23 @@ export default function DirectQuoteCalculator({ companyId, accountId, onSuccess 
 
       const notes = `Cotización directa por pruebas para ${calculations.totalTests} evaluaciones psicométricas.
 
-Descuento por volumen aplicado: ${formatCurrencyForNotes(calculations.totalDiscountAmount, calculations.symbol)}
-ITBIS (18%): ${formatCurrencyForNotes(calculations.itbisAmount, calculations.symbol)}
+Descuento por volumen aplicado: ${formatCurrencyForNotes(calculations.totalDiscountAmount, calculations.symbol)}${calculations.applyTax ? `\nITBIS (18%): ${formatCurrencyForNotes(calculations.itbisAmount, calculations.symbol)}` : ""}
 Total: ${formatCurrencyForNotes(calculations.total, calculations.symbol)}`
+
+      const isRes4DOP = invoiceResolution === "4" && currency === "DOP"
+      const alegraExchangeRate =
+        currency === "EUR" ? exchangeRateEUR : exchangeRateUSD
 
       const alegraInput: CreateInvoiceInput = {
         customer: {
           name: companyId ? `Empresa ID: ${companyId}` : accountId ? `Cuenta ID: ${accountId}` : "Cliente directo",
         },
         items: alegraItems,
-        currency: "USD",
-        exchangeRate: exchangeRateUSD,
+        ...(isRes4DOP ? {} : { currency, exchangeRate: alegraExchangeRate }),
         issueDate,
         dueDate,
         notes,
-        companyType: "local",
+        companyType: calculations.applyTax ? "local" : "international",
         externalRef: `DIRECT-QUOTE-${companyId ?? accountId ?? "unknown"}-${Date.now()}`,
       }
 
@@ -283,7 +443,7 @@ Total: ${formatCurrencyForNotes(calculations.total, calculations.symbol)}`
 
       const fullPayload = {
         currency,
-        companyType: "local",
+        companyType: calculations.applyTax ? "local" : "international",
         calculations: {
           subtotalWithoutDiscount: calculations.subtotalWithoutDiscount,
           totalDiscountAmount: calculations.totalDiscountAmount,
@@ -396,17 +556,26 @@ Total: ${formatCurrencyForNotes(calculations.total, calculations.symbol)}`
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 lg:gap-6">
               {/* Left column: Inputs */}
               <div className="space-y-3 w-full max-w-xl">
-                <div className="flex items-center gap-2 justify-start">
-                  <span className="text-xs sm:text-sm text-muted-foreground font-medium">Moneda:</span>
-                  <Select value={currency} onValueChange={setCurrency}>
-                    <SelectTrigger className="w-[120px] sm:w-[140px] bg-background h-9 sm:h-10 text-xs sm:text-sm border-2 font-medium">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="USD">💵 USD</SelectItem>
-                      <SelectItem value="DOP">🇩🇴 DOP</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-2 justify-start">
+                    <span className="text-xs sm:text-sm text-muted-foreground font-medium">Moneda:</span>
+                    <Select value={currency} onValueChange={setCurrency}>
+                      <SelectTrigger className="w-[120px] sm:w-[140px] bg-background h-9 sm:h-10 text-xs sm:text-sm border-2 font-medium">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {currencyOptions.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {showDopUsdNote && (
+                    <div className="flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800">
+                      <Info className="h-3.5 w-3.5 mt-0.5 shrink-0 text-amber-600" />
+                      <span>Los precios se muestran en DOP como referencia. La factura será emitida en USD.</span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -420,7 +589,7 @@ Total: ${formatCurrencyForNotes(calculations.total, calculations.symbol)}`
                     max="9999"
                     placeholder="Ej: 50"
                     value={testQuantities.competenciaPlus}
-                    onChange={(e) => setTestQuantities((prev) => ({ ...prev, competenciaPlus: e.target.value }))}
+                    onChange={(e) => setTestQuantities((prev) => ({ ...prev, competenciaPlus: clampQty(e.target.value) }))}
                     className="text-sm h-9 sm:h-10 border-2 focus:border-primary transition-colors"
                   />
                 </div>
@@ -436,7 +605,7 @@ Total: ${formatCurrencyForNotes(calculations.total, calculations.symbol)}`
                     max="9999"
                     placeholder="Ej: 50"
                     value={testQuantities.pensamientoAnalitico}
-                    onChange={(e) => setTestQuantities((prev) => ({ ...prev, pensamientoAnalitico: e.target.value }))}
+                    onChange={(e) => setTestQuantities((prev) => ({ ...prev, pensamientoAnalitico: clampQty(e.target.value) }))}
                     className="text-sm h-9 sm:h-10 border-2 focus:border-primary transition-colors"
                   />
                 </div>
@@ -452,7 +621,7 @@ Total: ${formatCurrencyForNotes(calculations.total, calculations.symbol)}`
                     max="9999"
                     placeholder="Ej: 30"
                     value={testQuantities.motivadores}
-                    onChange={(e) => setTestQuantities((prev) => ({ ...prev, motivadores: e.target.value }))}
+                    onChange={(e) => setTestQuantities((prev) => ({ ...prev, motivadores: clampQty(e.target.value) }))}
                     className="text-sm h-9 sm:h-10 border-2 focus:border-primary transition-colors"
                   />
                 </div>
@@ -468,7 +637,7 @@ Total: ${formatCurrencyForNotes(calculations.total, calculations.symbol)}`
                     max="9999"
                     placeholder="Ej: 100"
                     value={testQuantities.competenciasBasicas}
-                    onChange={(e) => setTestQuantities((prev) => ({ ...prev, competenciasBasicas: e.target.value }))}
+                    onChange={(e) => setTestQuantities((prev) => ({ ...prev, competenciasBasicas: clampQty(e.target.value) }))}
                     className="text-sm h-9 sm:h-10 border-2 focus:border-primary transition-colors"
                   />
                 </div>
@@ -484,7 +653,7 @@ Total: ${formatCurrencyForNotes(calculations.total, calculations.symbol)}`
                     max="9999"
                     placeholder="Ej: 100"
                     value={testQuantities.razonamientoGeneral}
-                    onChange={(e) => setTestQuantities((prev) => ({ ...prev, razonamientoGeneral: e.target.value }))}
+                    onChange={(e) => setTestQuantities((prev) => ({ ...prev, razonamientoGeneral: clampQty(e.target.value) }))}
                     className="text-sm h-9 sm:h-10 border-2 focus:border-primary transition-colors"
                   />
                 </div>
@@ -548,12 +717,14 @@ Total: ${formatCurrencyForNotes(calculations.total, calculations.symbol)}`
                               {formatCurrency(convertCurrency(calculations.totalDiscountAmount), calculations.symbol)}
                             </span>
                           </div>
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">ITBIS (18%):</span>
-                            <span className="font-semibold">
-                              {formatCurrency(convertCurrency(calculations.itbisAmount), calculations.symbol)}
-                            </span>
-                          </div>
+                          {calculations.applyTax && (
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">ITBIS (18%):</span>
+                              <span className="font-semibold">
+                                {formatCurrency(convertCurrency(calculations.itbisAmount), calculations.symbol)}
+                              </span>
+                            </div>
+                          )}
                         </div>
 
                         <div className="bg-gradient-to-r from-gray-500 to-gray-600 dark:from-gray-600 dark:to-gray-700 px-2.5 py-3 text-xs font-bold">
@@ -567,13 +738,24 @@ Total: ${formatCurrencyForNotes(calculations.total, calculations.symbol)}`
                   </div>
                 </div>
 
-                <Button
-                  onClick={handleContinue}
-                  disabled={calculations.totalTests === 0}
-                  className="w-full h-11 text-base font-semibold disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed"
-                >
-                  Continuar con esta cotización
-                </Button>
+                <div className="flex flex-col gap-2">
+                  <Button
+                    onClick={handleContinue}
+                    disabled={calculations.totalTests === 0}
+                    className="w-full h-11 text-base font-semibold disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed"
+                  >
+                    Continuar con esta cotización
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleExportPDF}
+                    disabled={calculations.totalTests === 0}
+                    className="w-full h-10 text-sm font-medium gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Download className="h-4 w-4" />
+                    Exportar cotización (PDF)
+                  </Button>
+                </div>
               </div>
             </div>
           </CardContent>
@@ -607,11 +789,11 @@ Total: ${formatCurrencyForNotes(calculations.total, calculations.symbol)}`
                     <div className="bg-gradient-to-r from-[#2d1b69] to-[#3d2b79] text-white grid grid-cols-7 gap-3 p-3 text-[10px] leading-tight font-bold">
                       <div className="col-span-1">Descripción</div>
                       <div className="text-center">Cantidad</div>
-                      <div className="text-right">Costo Por Evaluado Sin Descuento (USD)</div>
-                      <div className="text-right">Monto Total Sin Descuento (USD)</div>
-                      <div className="text-right">Descuento Por Volumen (USD)</div>
-                      <div className="text-right">Costo Por Evaluado con Descuento (USD)</div>
-                      <div className="text-right">Valor a Pagar Multiplicity (USD)</div>
+                      <div className="text-right">Costo Por Evaluado Sin Descuento ({currency})</div>
+                      <div className="text-right">Monto Total Sin Descuento ({currency})</div>
+                      <div className="text-right">Descuento Por Volumen ({currency})</div>
+                      <div className="text-right">Costo Por Evaluado con Descuento ({currency})</div>
+                      <div className="text-right">Valor a Pagar Multiplicity ({currency})</div>
                     </div>
 
                     <div className="bg-gradient-to-r from-[#00a69c] to-[#00b8ac] text-white px-3 py-2 text-sm font-bold">
@@ -729,15 +911,17 @@ Total: ${formatCurrencyForNotes(calculations.total, calculations.symbol)}`
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-7 gap-3 px-3 py-2.5 border-b">
-                        <div className="col-span-5"></div>
-                        <div className="col-span-2 grid grid-cols-2 gap-3">
-                          <div className="text-right font-bold text-sm">ITBIS (18%)</div>
-                          <div className="text-right font-bold text-sm">
-                            {formatCurrency(convertCurrency(calculations.itbisAmount), calculations.symbol)}
+                      {calculations.applyTax && (
+                        <div className="grid grid-cols-7 gap-3 px-3 py-2.5 border-b">
+                          <div className="col-span-5"></div>
+                          <div className="col-span-2 grid grid-cols-2 gap-3">
+                            <div className="text-right font-bold text-sm">ITBIS (18%)</div>
+                            <div className="text-right font-bold text-sm">
+                              {formatCurrency(convertCurrency(calculations.itbisAmount), calculations.symbol)}
+                            </div>
                           </div>
                         </div>
-                      </div>
+                      )}
 
                       <div className="grid grid-cols-7 gap-3 px-3 py-3">
                         <div className="col-span-5"></div>
@@ -765,7 +949,21 @@ Total: ${formatCurrencyForNotes(calculations.total, calculations.symbol)}`
                     </p>
                   </div>
 
-            
+                  {showDopUsdNote && (
+                    <div className="flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800">
+                      <Info className="h-3.5 w-3.5 mt-0.5 shrink-0 text-amber-600" />
+                      <span>Los precios se muestran en DOP como referencia. La factura será emitida en USD.</span>
+                    </div>
+                  )}
+
+                  <Button
+                    variant="outline"
+                    onClick={handleExportPDF}
+                    className="w-full gap-2 text-sm"
+                  >
+                    <Download className="h-4 w-4" />
+                    Exportar PDF
+                  </Button>
 
                   {submitError && (
                     <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
