@@ -153,11 +153,17 @@ function getCurrencyOptions(
   ]
 }
 
+/** País RD, sin país o vacío → tratamiento local (DOP en UI puede facturarse en USD según resolución). */
+function isLocalDominicanCountry(country: string | null | undefined): boolean {
+  const c = country?.trim() ?? ""
+  return c === "" || c === "República Dominicana"
+}
+
 export default function DirectQuoteCalculator({ companyId, accountId, invoiceResolution, clientCountry, onSuccess }: DirectQuoteCalculatorProps) {
   const [showDetailsDialog, setShowDetailsDialog] = useState(false)
   const [currency, setCurrency] = useState("USD")
-  const [exchangeRateUSD] = useState(61.0416)
-  const [exchangeRateEUR] = useState(68.50)
+  const [exchangeRateUSD] = useState(61.1933)
+  const [exchangeRateEUR] = useState(68.8845)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string>("")
   const [isSuccess, setIsSuccess] = useState(false)
@@ -260,7 +266,10 @@ export default function DirectQuoteCalculator({ companyId, accountId, invoiceRes
 
   const currencyOptions = getCurrencyOptions(clientCountry, invoiceResolution)
 
-  const showDopUsdNote = invoiceResolution === "1" && currency === "DOP"
+  const showDopUsdNote =
+    currency === "DOP" &&
+    (invoiceResolution === "1" ||
+      (invoiceResolution === "2" && isLocalDominicanCountry(clientCountry)))
 
   const handleExportPDF = () => {
     if (typeof window === "undefined") return
@@ -354,6 +363,8 @@ export default function DirectQuoteCalculator({ companyId, accountId, invoiceRes
     </table>
   </div>
 
+  ${showDopUsdNote ? `<div style="margin-top:12px;padding:10px 14px;background:#fef9c3;border:1px solid #fde047;border-radius:8px;font-size:12px;color:#854d0e;"><strong>Nota:</strong> Los precios se muestran en DOP como referencia. La factura será emitida en USD.</div>` : ""}
+
   <div class="footer">Este documento es una cotización referencial. Los precios están sujetos a confirmación.</div>
 </body>
 </html>`
@@ -400,12 +411,31 @@ export default function DirectQuoteCalculator({ companyId, accountId, invoiceRes
       const issueDate = today.toISOString().split("T")[0]
       const dueDate = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
 
+      // Resolución 4: factura en moneda elegida (USD/DOP/EUR) con conversión desde catálogo USD.
+      // País extranjero + EUR: misma factura en EUR (no forzar USD).
+      const isRes4 = String(invoiceResolution ?? "") === "4"
+      const isForeignClient = !isLocalDominicanCountry(clientCountry)
+      const alegraExchangeRate =
+        currency === "EUR" ? exchangeRateEUR : exchangeRateUSD
+
+      const unitPriceUsdToInvoiceCurrency = (priceUsd: number): number => {
+        if (isRes4) {
+          if (currency === "DOP") return priceUsd * exchangeRateUSD
+          if (currency === "EUR") return priceUsd * (exchangeRateUSD / exchangeRateEUR)
+          return priceUsd
+        }
+        if (isForeignClient && currency === "EUR") {
+          return priceUsd * (exchangeRateUSD / exchangeRateEUR)
+        }
+        return priceUsd
+      }
+
       const alegraItems = calculations.testDetails
         .filter((test) => test.qty > 0)
         .map((test) => ({
           id: ALEGRA_TEST_IDS[test.name],
           name: test.name,
-          price: Math.round(test.price * 100) / 100,
+          price: Math.round(unitPriceUsdToInvoiceCurrency(test.price) * 100) / 100,
           quantity: test.qty,
           discount:
             test.hasDiscount && test.totalWithoutDiscount > 0
@@ -418,22 +448,19 @@ export default function DirectQuoteCalculator({ companyId, accountId, invoiceRes
 Descuento por volumen aplicado: ${formatCurrencyForNotes(calculations.totalDiscountAmount, calculations.symbol)}${calculations.applyTax ? `\nITBIS (18%): ${formatCurrencyForNotes(calculations.itbisAmount, calculations.symbol)}` : ""}
 Total: ${formatCurrencyForNotes(calculations.total, calculations.symbol)}`
 
-      // Resolución 4: la factura se emite en la moneda seleccionada.
-      // Si eligieron DOP, no se envía currency ni exchangeRate (Alegra lo trata como moneda local).
-      // Para USD o EUR se envía la moneda y su tasa correspondiente.
-      // Para cualquier otra resolución, siempre se envía USD con su tasa.
-      const isRes4 = invoiceResolution === "4"
-      const alegraExchangeRate =
-        currency === "EUR" ? exchangeRateEUR : exchangeRateUSD
-
+      // Resolución 4 + DOP: no se envía objeto currency (moneda base en Alegra).
+      // Resolución 4 + USD/EUR: moneda y tasa.
+      // Cliente extranjero + EUR: factura en EUR con tasa euro.
+      // Resto (local o extranjero en USD): factura en USD.
       let currencyOverride: Partial<CreateInvoiceInput> = {}
       if (isRes4) {
         if (currency === "DOP") {
-          // Pasar "DOP" explícitamente para que buildInvoicePayload omita el campo currency
           currencyOverride = { currency: "DOP" }
         } else {
           currencyOverride = { currency, exchangeRate: alegraExchangeRate }
         }
+      } else if (isForeignClient && currency === "EUR") {
+        currencyOverride = { currency: "EUR", exchangeRate: exchangeRateEUR }
       } else {
         currencyOverride = { currency: "USD", exchangeRate: exchangeRateUSD }
       }

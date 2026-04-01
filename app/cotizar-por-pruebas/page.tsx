@@ -45,8 +45,9 @@ type AlegraInvoice = {
     number?: string
   }
   currency?: {
-    code: string
-    symbol: string
+    code?: string
+    symbol?: string | null
+    exchangeRate?: string | number
   }
   items?: {
     name: string
@@ -55,6 +56,27 @@ type AlegraInvoice = {
     discount?: number
     total?: number
   }[]
+}
+
+/** Solo facturas con código USD se consideran en dólares; el resto se trata como DOP. */
+function isInvoiceUsd(currency?: AlegraInvoice["currency"]): boolean {
+  return (currency?.code ?? "").trim().toUpperCase() === "USD"
+}
+
+function getInvoiceCurrencySymbol(currency?: AlegraInvoice["currency"]): string {
+  const raw = currency?.symbol?.trim()
+  if (isInvoiceUsd(currency)) {
+    if (raw && raw !== "$") return raw
+    return "US$"
+  }
+  if (raw && raw !== "$") return raw
+  return "RD$"
+}
+
+function formatInvoiceMoney(currency: AlegraInvoice["currency"] | undefined, amount: number) {
+  const sym = getInvoiceCurrencySymbol(currency)
+  const num = amount.toLocaleString("es-DO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  return `${sym} ${num}`
 }
 
 function CotizarPorPruebasContent() {
@@ -196,8 +218,8 @@ function CotizarPorPruebasContent() {
       </div>
 
       <div className="container mx-auto px-3 sm:px-4 py-6 md:py-8 lg:py-10">
-        <div className="max-w-6xl mx-auto grid gap-6 lg:gap-10 lg:grid-cols-[minmax(0,3fr)_minmax(0,1.25fr)] items-start">
-          <section className="space-y-3">
+        <div className="max-w-7xl mx-auto grid gap-6 lg:gap-8 xl:gap-10 lg:grid-cols-[minmax(0,2.2fr)_minmax(300px,1.55fr)] xl:grid-cols-[minmax(0,2.35fr)_minmax(340px,1.5fr)] items-start">
+          <section className="space-y-3 min-w-0">
             {companyId && isLoadingClientInfo ? (
               <div className="flex flex-col items-center justify-center gap-3 py-20 text-muted-foreground">
                 <Loader2 className="h-8 w-8 animate-spin text-[#00BCB4]" />
@@ -215,8 +237,8 @@ function CotizarPorPruebasContent() {
           </section>
 
           {invoiceClientId && (
-            <aside className="space-y-3 lg:space-y-4">
-              <div className="rounded-2xl border bg-card/60 backdrop-blur-sm p-3 sm:p-4 shadow-sm">
+            <aside className="space-y-3 lg:space-y-4 w-full min-w-0 lg:max-w-none xl:min-w-[320px]">
+              <div className="rounded-2xl border bg-card/60 backdrop-blur-sm p-4 sm:p-5 shadow-sm w-full min-w-0">
                 <div className="flex items-center justify-between gap-2 mb-3">
                   <div className="space-y-1">
                     <h3 className="text-sm sm:text-base font-semibold text-foreground">
@@ -291,10 +313,10 @@ function CotizarPorPruebasContent() {
                               setIsInvoiceDialogOpen(true)
                             }
                           }}
-                          className="flex flex-col rounded-xl border border-border/60 bg-background/90 px-3 sm:px-3.5 py-2.5 cursor-pointer transition-colors hover:bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00BCB4]/60"
+                          className="flex flex-col rounded-xl border border-border/60 bg-background/90 px-3.5 sm:px-4 py-3 cursor-pointer transition-colors hover:bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00BCB4]/60"
                         >
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="space-y-1">
+                          <div className="flex items-start justify-between gap-3 sm:gap-4">
+                            <div className="space-y-1 min-w-0 flex-1">
                               <div className="flex flex-wrap items-center gap-2">
                                 <span className="text-xs font-semibold text-foreground">
                                   Factura{" "}
@@ -313,13 +335,12 @@ function CotizarPorPruebasContent() {
                                 </span>
                               </p>
                             </div>
-                            <div className="flex flex-col items-end text-xs sm:text-sm">
-                              <span className="text-[10px] text-muted-foreground">
+                            <div className="flex flex-col items-end text-xs sm:text-sm shrink-0 min-w-[9.5rem] sm:min-w-[10.5rem]">
+                              <span className="text-[10px] text-muted-foreground whitespace-nowrap">
                                 Saldo pendiente
                               </span>
-                              <span className="text-sm font-semibold text-foreground">
-                                {invoice.currency?.symbol || "$"}
-                                {invoice.balance.toFixed(2)}
+                              <span className="text-sm font-semibold text-foreground tabular-nums whitespace-nowrap leading-tight">
+                                {formatInvoiceMoney(invoice.currency, invoice.balance)}
                               </span>
                             </div>
                           </div>
@@ -368,10 +389,10 @@ function CotizarPorPruebasContent() {
                                   setIsInvoiceDialogOpen(true)
                                 }
                               }}
-                              className="flex flex-col rounded-xl border border-border/40 bg-background/80 px-3 sm:px-3.5 py-2.5 text-xs sm:text-sm cursor-pointer transition-colors hover:bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00BCB4]/60"
+                              className="flex flex-col rounded-xl border border-border/40 bg-background/80 px-3.5 sm:px-4 py-3 text-xs sm:text-sm cursor-pointer transition-colors hover:bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00BCB4]/60"
                             >
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="space-y-1">
+                              <div className="flex items-start justify-between gap-3 sm:gap-4">
+                                <div className="space-y-1 min-w-0 flex-1">
                                   <div className="flex flex-wrap items-center gap-2">
                                     <span className="font-semibold text-foreground">
                                       Factura{" "}
@@ -387,13 +408,12 @@ function CotizarPorPruebasContent() {
                                     Fecha: {invoice.date}
                                   </p>
                                 </div>
-                                <div className="flex flex-col items-end text-xs sm:text-sm">
-                                  <span className="text-[10px] text-muted-foreground">
+                                <div className="flex flex-col items-end text-xs sm:text-sm shrink-0 min-w-[9.5rem] sm:min-w-[10.5rem]">
+                                  <span className="text-[10px] text-muted-foreground whitespace-nowrap">
                                     Monto total
                                   </span>
-                                  <span className="font-semibold text-foreground">
-                                    {invoice.currency?.symbol || "$"}
-                                    {invoice.total.toFixed(2)}
+                                  <span className="font-semibold text-foreground tabular-nums whitespace-nowrap leading-tight">
+                                    {formatInvoiceMoney(invoice.currency, invoice.total)}
                                   </span>
                                 </div>
                               </div>
@@ -491,9 +511,8 @@ function CotizarPorPruebasContent() {
                     <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
                       Saldo pendiente
                     </p>
-                    <p className="text-lg sm:text-xl font-semibold text-foreground">
-                      {selectedInvoice.currency?.symbol || "$"}
-                      {selectedInvoice.balance.toFixed(2)}
+                    <p className="text-lg sm:text-xl font-semibold text-foreground tabular-nums">
+                      {formatInvoiceMoney(selectedInvoice.currency, selectedInvoice.balance)}
                     </p>
                   </div>
                 </div>
@@ -522,12 +541,11 @@ function CotizarPorPruebasContent() {
                           <div className="w-16 text-right text-muted-foreground">
                             {item.quantity}
                           </div>
-                          <div className="w-20 text-right text-muted-foreground">
-                            {(item.price ?? 0).toFixed(2)}
+                          <div className="w-20 text-right text-muted-foreground tabular-nums text-[11px]">
+                            {formatInvoiceMoney(selectedInvoice.currency, item.price ?? 0)}
                           </div>
-                          <div className="w-24 text-right font-medium">
-                            {selectedInvoice.currency?.symbol || "$"}
-                            {lineTotal.toFixed(2)}
+                          <div className="w-24 text-right font-medium tabular-nums">
+                            {formatInvoiceMoney(selectedInvoice.currency, lineTotal)}
                           </div>
                         </div>
                       )
@@ -539,44 +557,38 @@ function CotizarPorPruebasContent() {
               <div className="flex flex-col items-end gap-1 text-sm">
                 <div className="flex justify-between w-full max-w-xs text-muted-foreground">
                   <span>Subtotal</span>
-                  <span>
-                    {selectedInvoice.currency?.symbol || "$"}
-                    {selectedInvoice.subtotal.toFixed(2)}
+                  <span className="tabular-nums">
+                    {formatInvoiceMoney(selectedInvoice.currency, selectedInvoice.subtotal)}
                   </span>
                 </div>
                 <div className="flex justify-between w-full max-w-xs text-muted-foreground">
                   <span>Descuento</span>
-                  <span>
-                    {selectedInvoice.currency?.symbol || "$"}
-                    {selectedInvoice.discount.toFixed(2)}
+                  <span className="tabular-nums">
+                    {formatInvoiceMoney(selectedInvoice.currency, selectedInvoice.discount)}
                   </span>
                 </div>
                 <div className="flex justify-between w-full max-w-xs text-muted-foreground">
                   <span>ITBIS</span>
-                  <span>
-                    {selectedInvoice.currency?.symbol || "$"}
-                    {selectedInvoice.tax.toFixed(2)}
+                  <span className="tabular-nums">
+                    {formatInvoiceMoney(selectedInvoice.currency, selectedInvoice.tax)}
                   </span>
                 </div>
                 <div className="flex justify-between w-full max-w-xs font-semibold text-foreground border-t border-border/60 pt-2 mt-1">
                   <span>Total</span>
-                  <span>
-                    {selectedInvoice.currency?.symbol || "$"}
-                    {selectedInvoice.total.toFixed(2)}
+                  <span className="tabular-nums">
+                    {formatInvoiceMoney(selectedInvoice.currency, selectedInvoice.total)}
                   </span>
                 </div>
                 <div className="flex justify-between w-full max-w-xs text-xs text-muted-foreground">
                   <span>Pagado</span>
-                  <span>
-                    {selectedInvoice.currency?.symbol || "$"}
-                    {selectedInvoice.totalPaid.toFixed(2)}
+                  <span className="tabular-nums">
+                    {formatInvoiceMoney(selectedInvoice.currency, selectedInvoice.totalPaid)}
                   </span>
                 </div>
                 <div className="flex justify-between w-full max-w-xs text-xs font-medium text-foreground">
                   <span>Saldo pendiente</span>
-                  <span>
-                    {selectedInvoice.currency?.symbol || "$"}
-                    {selectedInvoice.balance.toFixed(2)}
+                  <span className="tabular-nums">
+                    {formatInvoiceMoney(selectedInvoice.currency, selectedInvoice.balance)}
                   </span>
                 </div>
               </div>
