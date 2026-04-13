@@ -143,11 +143,15 @@ function CotizarPorPruebasContent() {
 
       const data = await res.json()
 
-      const list: AlegraInvoice[] = Array.isArray(data)
+      const rawList: AlegraInvoice[] = Array.isArray(data)
         ? data
         : data
         ? [data]
         : []
+
+      const list = rawList.filter(
+        (inv) => (inv.status ?? "").toLowerCase() !== "draft",
+      )
 
       setInvoices(list)
     } catch (error: any) {
@@ -231,6 +235,7 @@ function CotizarPorPruebasContent() {
                 accountId={accountId}
                 invoiceResolution={clientInfo?.defaultInvoiceResolution ?? null}
                 clientCountry={clientInfo?.country ?? null}
+                clientName={clientInfo?.name ?? null}
                 onSuccess={() => void fetchInvoices()}
               />
             )}

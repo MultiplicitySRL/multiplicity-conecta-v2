@@ -7,10 +7,11 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Sparkles, CheckCircle2, Loader2, AlertCircle, Download, Info } from "lucide-react"
+import { Sparkles, Loader2, AlertCircle, Download, Info } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { buildInvoicePayload } from "@/lib/alegra-invoice-payload"
 import type { CreateInvoiceInput } from "@/lib/alegra-invoice-payload"
+import { buildDirectQuotePdfHtml } from "@/lib/direct-quote-pdf-html"
 
 const ALEGRA_TEST_IDS: Record<string, number> = {
   "Test Competencias Plus": 1,
@@ -122,6 +123,8 @@ interface DirectQuoteCalculatorProps {
   accountId: string | null
   invoiceResolution?: string | null
   clientCountry?: string | null
+  /** Nombre de la empresa en Alegra (misma línea que el correo de confirmación). */
+  clientName?: string | null
   onSuccess?: () => void
 }
 
@@ -159,7 +162,14 @@ function isLocalDominicanCountry(country: string | null | undefined): boolean {
   return c === "" || c === "República Dominicana"
 }
 
-export default function DirectQuoteCalculator({ companyId, accountId, invoiceResolution, clientCountry, onSuccess }: DirectQuoteCalculatorProps) {
+export default function DirectQuoteCalculator({
+  companyId,
+  accountId,
+  invoiceResolution,
+  clientCountry,
+  clientName,
+  onSuccess,
+}: DirectQuoteCalculatorProps) {
   const [showDetailsDialog, setShowDetailsDialog] = useState(false)
   const [currency, setCurrency] = useState("USD")
   const [exchangeRateUSD] = useState(61.1933)
@@ -273,101 +283,17 @@ export default function DirectQuoteCalculator({ companyId, accountId, invoiceRes
 
   const handleExportPDF = () => {
     if (typeof window === "undefined") return
-    const today = new Date()
-    const dateStr = today.toLocaleDateString("es-DO", { year: "numeric", month: "long", day: "numeric" })
-    const activeTests = calculations.testDetails.filter((t) => t.qty > 0)
-
-    const rows = activeTests.map((test) => `
-      <tr>
-        <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;">${test.name}</td>
-        <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;text-align:center;">${test.qty}</td>
-        <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;text-align:right;">${formatCurrency(convertCurrency(test.price), calculations.symbol)}</td>
-        <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;text-align:right;">${formatCurrency(convertCurrency(test.totalWithoutDiscount), calculations.symbol)}</td>
-        <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;text-align:right;color:#16a34a;">${test.hasDiscount ? formatCurrency(convertCurrency(test.discountAmount), calculations.symbol) : "-"}</td>
-        <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:600;">${formatCurrency(convertCurrency(test.totalWithDiscount), calculations.symbol)}</td>
-      </tr>
-    `).join("")
-
-
-    const html = `<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8"/>
-  <title>Cotización Multiplicity</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: Arial, sans-serif; font-size: 13px; color: #111827; background: #fff; padding: 32px; }
-    .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 28px; border-bottom: 2px solid #00BCB4; padding-bottom: 16px; }
-    .header-title { font-size: 22px; font-weight: 700; color: #00BCB4; }
-    .header-meta { text-align: right; font-size: 12px; color: #6b7280; }
-    table { width: 100%; border-collapse: collapse; margin-top: 16px; }
-    thead tr { background: #2d1b69; color: #fff; }
-    thead th { padding: 8px 10px; text-align: left; font-size: 11px; }
-    thead th:not(:first-child) { text-align: right; }
-    thead th:nth-child(2) { text-align: center; }
-    tbody tr:hover { background: #f9fafb; }
-    .totals { margin-top: 16px; display: flex; justify-content: flex-end; }
-    .totals-table { width: 320px; border-collapse: collapse; }
-    .totals-table td { padding: 5px 10px; font-size: 13px; }
-    .totals-table .label { color: #6b7280; }
-    .totals-table .value { text-align: right; font-weight: 600; }
-    .totals-table .grand { font-size: 15px; font-weight: 700; border-top: 2px solid #111827; }
-    .footer { margin-top: 32px; font-size: 11px; color: #9ca3af; text-align: center; }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <div>
-      <div class="header-title">Cotización de Pruebas</div>
-      <div style="font-size:12px;color:#6b7280;margin-top:4px;">Multiplicity</div>
-    </div>
-    <div class="header-meta">
-      <div><strong>Fecha:</strong> ${dateStr}</div>
-      <div><strong>Moneda:</strong> ${currency}</div>
-      ${companyId ? `<div><strong>Empresa ID:</strong> ${companyId}</div>` : ""}
-    </div>
-  </div>
-
-  <table>
-    <thead>
-      <tr>
-        <th>Prueba</th>
-        <th style="text-align:center;">Cantidad</th>
-        <th style="text-align:right;">Precio Base</th>
-        <th style="text-align:right;">Subtotal sin Desc.</th>
-        <th style="text-align:right;">Descuento</th>
-        <th style="text-align:right;">Total</th>
-      </tr>
-    </thead>
-    <tbody>${rows}</tbody>
-  </table>
-
-  <div class="totals">
-    <table class="totals-table">
-      <tr>
-        <td class="label">Subtotal con descuento</td>
-        <td class="value">${formatCurrency(convertCurrency(calculations.subtotalWithDiscount), calculations.symbol)}</td>
-      </tr>
-      <tr>
-        <td class="label">Descuento total</td>
-        <td class="value" style="color:#16a34a;">${formatCurrency(convertCurrency(calculations.totalDiscountAmount), calculations.symbol)}</td>
-      </tr>
-      ${calculations.applyTax ? `<tr>
-        <td class="label">ITBIS (18%)</td>
-        <td class="value">${formatCurrency(convertCurrency(calculations.itbisAmount), calculations.symbol)}</td>
-      </tr>` : ""}
-      <tr class="grand">
-        <td class="label grand">Total Neto</td>
-        <td class="value grand">${formatCurrency(calculations.total, calculations.symbol)}</td>
-      </tr>
-    </table>
-  </div>
-
-  ${showDopUsdNote ? `<div style="margin-top:12px;padding:10px 14px;background:#fef9c3;border:1px solid #fde047;border-radius:8px;font-size:12px;color:#854d0e;"><strong>Nota:</strong> Los precios se muestran en DOP como referencia. La factura será emitida en USD.</div>` : ""}
-
-  <div class="footer">Este documento es una cotización referencial. Los precios están sujetos a confirmación.</div>
-</body>
-</html>`
+    const html = buildDirectQuotePdfHtml({
+      origin: window.location.origin,
+      quoteDate: new Date(),
+      clientName,
+      companyId,
+      currency,
+      showDopUsdNote,
+      calculations,
+      formatCurrency,
+      convertCurrency,
+    })
 
     const win = window.open("", "_blank", "width=900,height=700")
     if (!win) return
@@ -519,7 +445,8 @@ Total: ${formatCurrencyForNotes(calculations.total, calculations.symbol)}`
       }
 
       setInvoiceData({
-        message: "Tu cotización ha sido enviada exitosamente.",
+        message:
+          "Solicitud recibida. Facturación en hasta 24 h; al recibir la factura, las evaluaciones quedan adjudicadas.",
         company_id: companyId ? parseInt(companyId, 10) : null,
       })
       setIsSuccess(true)
@@ -549,26 +476,56 @@ Total: ${formatCurrencyForNotes(calculations.total, calculations.symbol)}`
     setSubmitError("")
   }
 
-  // Pantalla de éxito
+  // Pantalla de éxito: resumen corto (el correo lleva el detalle)
   if (isSuccess && invoiceData) {
+    const selectedTests = calculations.testDetails.filter((t) => t.qty > 0)
     return (
-      <div className="max-w-2xl mx-auto text-center py-12">
-        <div className="mb-6 flex justify-center">
-          <div className="relative">
-            <div className="absolute inset-0 bg-green-500/20 rounded-full animate-ping" />
-            <div className="relative bg-green-500 text-white rounded-full p-6">
-              <CheckCircle2 className="h-16 w-16" />
-            </div>
+      <div className="max-w-lg mx-auto py-10 px-4">
+        <div className="rounded-xl border border-border bg-card p-6 sm:p-7 shadow-sm text-center">
+          <div className="h-1 w-14 rounded-full bg-[#00A99D] mx-auto mb-5" aria-hidden />
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-foreground tracking-tight mb-6">
+            Solicitud recibida
+          </h2>
+          <div className="text-sm sm:text-[15px] text-muted-foreground leading-relaxed text-left space-y-3 mb-5">
+            <p className="text-balance">
+              Procederemos con la facturación de las evaluaciones en un plazo máximo de{" "}
+              <span className="font-medium text-foreground">24 horas</span>.
+            </p>
+            <p className="text-balance">
+              Una vez recibas la factura, tus evaluaciones serán adjudicadas y estarán listas para su
+              uso.
+            </p>
           </div>
+          {selectedTests.length > 0 && (
+            <div className="rounded-lg border border-border/70 bg-muted/40 text-left p-4 mb-2">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+                Pruebas en tu solicitud
+              </p>
+              <ul className="space-y-2 text-sm text-foreground">
+                {selectedTests.map((t) => (
+                  <li key={t.key} className="flex justify-between gap-3 items-baseline">
+                    <span className="text-muted-foreground leading-snug min-w-0">{t.name}</span>
+                    <span className="font-semibold tabular-nums shrink-0">
+                      {t.qty} {t.qty === 1 ? "evaluación" : "evaluaciones"}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              {calculations.totalTests > 0 && (
+                <p className="mt-3 pt-3 border-t border-border/60 text-xs text-muted-foreground">
+                  Total:{" "}
+                  <span className="font-semibold text-foreground tabular-nums">
+                    {calculations.totalTests}
+                  </span>{" "}
+                  evaluaciones
+                </p>
+              )}
+            </div>
+          )}
+          <Button variant="outline" onClick={handleNewQuote} className="mt-6 w-full sm:w-auto">
+            Hacer otra cotización
+          </Button>
         </div>
-        <h2 className="text-3xl font-bold text-foreground mb-3">¡Factura creada!</h2>
-        <p className="text-muted-foreground text-lg mb-4">
-          Tus pruebas han sido habilitadas y ya están listas para usar.
-        </p>
-       
-        <Button onClick={handleNewQuote}>
-          Hacer otra cotización
-        </Button>
       </div>
     )
   }
@@ -807,7 +764,9 @@ Total: ${formatCurrencyForNotes(calculations.total, calculations.symbol)}`
           <div className="sticky top-0 z-10 bg-gradient-to-r from-primary to-primary/90 text-white px-6 py-6 shadow-lg">
             <DialogHeader>
               <DialogTitle className="text-3xl font-bold text-white mb-2">¡Ya casi estás listo!</DialogTitle>
-              <p className="text-white/90 text-base">Revisa tu cotización y confirma para crear la factura.</p>
+              <p className="text-white/90 text-base">
+                Revisa tu cotización y confirma para enviar tu solicitud de facturación.
+              </p>
             </DialogHeader>
           </div>
 
@@ -982,9 +941,11 @@ Total: ${formatCurrencyForNotes(calculations.total, calculations.symbol)}`
               <Card className="border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
                 <CardContent className="p-5 space-y-4">
                   <div className="space-y-1">
-                    <h4 className="text-lg font-bold text-foreground">Confirmar cotización</h4>
+                    <h4 className="text-lg font-bold text-foreground">Confirmar solicitud</h4>
                     <p className="text-sm text-muted-foreground leading-relaxed">
-                      Al confirmar se creará la factura y tus pruebas quedarán habilitadas.
+                      Al confirmar enviaremos tu solicitud. Procederemos con la facturación en un plazo máximo de{" "}
+                      <span className="font-medium text-foreground">24 horas</span>. Cuando recibas la factura, tus
+                      evaluaciones quedarán adjudicadas y listas para su uso.
                     </p>
                   </div>
 
@@ -1025,7 +986,7 @@ Total: ${formatCurrencyForNotes(calculations.total, calculations.symbol)}`
                         Procesando...
                       </>
                     ) : (
-                      "Confirmar y Crear Factura"
+                      "Confirmar solicitud de facturación"
                     )}
                   </Button>
 
