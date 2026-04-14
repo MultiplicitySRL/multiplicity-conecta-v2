@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge"
 import { buildInvoicePayload } from "@/lib/alegra-invoice-payload"
 import type { CreateInvoiceInput } from "@/lib/alegra-invoice-payload"
 import { buildDirectQuotePdfHtml } from "@/lib/direct-quote-pdf-html"
+import { downloadHtmlAsPdf } from "@/lib/download-quote-pdf"
 
 const ALEGRA_TEST_IDS: Record<string, number> = {
   "Test Competencias Plus": 1,
@@ -126,6 +127,10 @@ interface DirectQuoteCalculatorProps {
   /** Nombre de la empresa en Alegra (misma línea que el correo de confirmación). */
   clientName?: string | null
   onSuccess?: () => void
+  /** RD$ por 1 USD (referencia para UI y factura en DOP). */
+  exchangeRateUSD?: number
+  /** RD$ por 1 EUR (referencia para conversión a EUR en UI). */
+  exchangeRateEUR?: number
 }
 
 /**
@@ -169,11 +174,11 @@ export default function DirectQuoteCalculator({
   clientCountry,
   clientName,
   onSuccess,
+  exchangeRateUSD = 60.4055,
+  exchangeRateEUR = 70.305336,
 }: DirectQuoteCalculatorProps) {
   const [showDetailsDialog, setShowDetailsDialog] = useState(false)
   const [currency, setCurrency] = useState("USD")
-  const [exchangeRateUSD] = useState(61.1933)
-  const [exchangeRateEUR] = useState(68.8845)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string>("")
   const [isSuccess, setIsSuccess] = useState(false)
@@ -281,7 +286,7 @@ export default function DirectQuoteCalculator({
     (invoiceResolution === "1" ||
       (invoiceResolution === "2" && isLocalDominicanCountry(clientCountry)))
 
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
     if (typeof window === "undefined") return
     const html = buildDirectQuotePdfHtml({
       origin: window.location.origin,
@@ -294,15 +299,10 @@ export default function DirectQuoteCalculator({
       formatCurrency,
       convertCurrency,
     })
-
-    const win = window.open("", "_blank", "width=900,height=700")
-    if (!win) return
-    win.document.write(html)
-    win.document.close()
-    win.focus()
-    setTimeout(() => {
-      win.print()
-    }, 400)
+    await downloadHtmlAsPdf(
+      html,
+      `cotizacion-multiplicity-${new Date().toISOString().slice(0, 10)}.pdf`,
+    )
   }
 
   const clampQty = (value: string): string => {

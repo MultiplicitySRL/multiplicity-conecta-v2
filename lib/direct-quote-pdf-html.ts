@@ -272,6 +272,7 @@ export function buildDirectQuotePdfHtml(p: BuildDirectQuotePdfHtmlParams): strin
       font-size: 10.5pt;
       color: #111827;
       line-height: 1.4;
+      background: #ffffff;
     }
     .top-bar {
       height: 11px;
@@ -279,7 +280,11 @@ export function buildDirectQuotePdfHtml(p: BuildDirectQuotePdfHtmlParams): strin
       margin: 0 0 18px 0;
       width: 100%;
     }
-    .sheet { max-width: 100%; }
+    .sheet {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 0 20px 24px 20px;
+    }
     .brand-block { margin-bottom: 16px; }
     .logo { max-height: 36px; width: auto; display: block; margin-bottom: 10px; }
     .letterhead { font-size: 9.75pt; color: #374151; }

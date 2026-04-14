@@ -122,7 +122,15 @@ function calculateVolumeDiscount(totalTests: number): number {
   return 0
 }
 
-export default function QuoteCalculator() {
+type QuoteCalculatorProps = {
+  exchangeRateUSD?: number
+  exchangeRateEUR?: number
+}
+
+export default function QuoteCalculator({
+  exchangeRateUSD = 60.4055,
+  exchangeRateEUR = 70.305336,
+}: QuoteCalculatorProps = {}) {
   const user = useUser()
   const [currentStep, setCurrentStep] = useState(1)
   const [directivos, setDirectivos] = useState("")
@@ -132,8 +140,6 @@ export default function QuoteCalculator() {
   const [selectedScenario, setSelectedScenario] = useState<number | null>(null)
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [currency, setCurrency] = useState("USD")
-  const [exchangeRateUSD] = useState(61.1933)
-  const [exchangeRateEUR] = useState(68.8845)
   const [companyType, setCompanyType] = useState<"local" | "international" | null>(null)
   const [regenerationCount, setRegenerationCount] = useState(0)
 

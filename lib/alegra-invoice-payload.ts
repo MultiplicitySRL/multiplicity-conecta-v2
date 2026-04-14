@@ -35,7 +35,7 @@ export type CreateInvoiceInput = {
   companyType?: "local" | "international"
 }
 
-const DEFAULT_EXCHANGE_RATE = 61.1933
+const DEFAULT_EXCHANGE_RATE = 60.4055
 
 /**
  * Construye el payload para crear una factura en Alegra.

@@ -10,6 +10,9 @@ import { BlockedAccessScreen } from "@/components/blocked-access-screen"
 import { Loader2 } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
+const EXCHANGE_RATE_USD_DOP = 60.4055
+const EXCHANGE_RATE_EUR_REF = 70.305336
+
 type AlegraClientInfo = {
   id: string
   name: string
@@ -237,6 +240,8 @@ function CotizarPorPruebasContent() {
                 clientCountry={clientInfo?.country ?? null}
                 clientName={clientInfo?.name ?? null}
                 onSuccess={() => void fetchInvoices()}
+                exchangeRateUSD={EXCHANGE_RATE_USD_DOP}
+                exchangeRateEUR={EXCHANGE_RATE_EUR_REF}
               />
             )}
           </section>

@@ -10,11 +10,13 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
-import { Check, ChevronRight, ChevronLeft, Loader2, Calendar, FileText } from "lucide-react"
+import { Check, ChevronRight, ChevronLeft, Loader2, Calendar, FileText, Download } from "lucide-react"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { AnimatePresence, motion, LayoutGroup } from "framer-motion"
 import { buildInvoicePayload } from "@/lib/alegra-invoice-payload"
 import type { CreateInvoiceInput } from "@/lib/alegra-invoice-payload"
+import { buildDirectQuotePdfHtml, type QuotePdfCalculations } from "@/lib/direct-quote-pdf-html"
+import { downloadHtmlAsPdf } from "@/lib/download-quote-pdf"
 
 interface ScenarioCardProps {
   scenario: {
@@ -524,6 +526,39 @@ Responsabilidades de Multiplicity:
     }, 100)
   }
 
+  const handleExportPDF = async () => {
+    if (typeof window === "undefined") return
+
+    const pdfCalculations: QuotePdfCalculations = {
+      testDetails: calculations.testDetails,
+      totalTests: calculations.totalTests,
+      subtotalWithoutDiscount: calculations.subtotalWithoutDiscount,
+      totalDiscountAmount: calculations.totalDiscountAmount,
+      subtotalWithDiscount: calculations.subtotalWithDiscount,
+      itbisAmount: calculations.itbisAmount,
+      applyTax: companyType === "local",
+      total: calculations.total,
+      symbol: calculations.symbol,
+    }
+
+    const html = buildDirectQuotePdfHtml({
+      origin: window.location.origin,
+      quoteDate: new Date(),
+      clientName: null,
+      companyId: null,
+      currency,
+      showDopUsdNote: false,
+      calculations: pdfCalculations,
+      formatCurrency,
+      convertCurrency,
+    })
+
+    await downloadHtmlAsPdf(
+      html,
+      `cotizacion-${scenario.title.toLowerCase().replace(/\s+/g, "-")}-${new Date().toISOString().slice(0, 10)}.pdf`,
+    )
+  }
+
   return (
     <>
       {/* Card Component - Keep exactly as is */}
@@ -861,6 +896,16 @@ Responsabilidades de Multiplicity:
                     </div>
                   </CardContent>
                 </Card>
+
+                {/* PDF Download Action */}
+                <Button
+                  variant="outline"
+                  className="w-full h-10 text-sm font-medium border-2 flex items-center gap-2"
+                  onClick={handleExportPDF}
+                >
+                  <Download className="h-4 w-4" />
+                  Descargar cotización (PDF)
+                </Button>
               </div>
 
               <Card>

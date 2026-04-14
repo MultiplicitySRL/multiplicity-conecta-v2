@@ -6,6 +6,9 @@ import Image from "next/image"
 import { Footer } from "@/components/footer"
 import { AccessGate } from "@/components/access-gate"
 
+const EXCHANGE_RATE_USD_DOP = 60.4055
+const EXCHANGE_RATE_EUR_REF = 70.305336
+
 export default function CotizarPage() {
   return (
     <Suspense>
@@ -58,7 +61,10 @@ export default function CotizarPage() {
       </div>
 
       <div className="container mx-auto px-3 sm:px-4 py-6 md:py-8 lg:py-10">
-        <QuoteCalculator />
+        <QuoteCalculator
+          exchangeRateUSD={EXCHANGE_RATE_USD_DOP}
+          exchangeRateEUR={EXCHANGE_RATE_EUR_REF}
+        />
       </div>
 
       <div className="container mx-auto px-3 sm:px-4 py-6 md:py-8">
