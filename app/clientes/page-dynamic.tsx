@@ -59,8 +59,19 @@ export default function ClientesPageDynamic() {
         setAutoOpenResourceId(resourceId)
         
         setTimeout(() => {
-          const elementId = isSection(targetResource) ? `section-${targetResource.id}` : `resource-${targetResource.id}`
-          const element = document.getElementById(elementId)
+          let element: HTMLElement | null = null
+          if (isSection(targetResource)) {
+            element = document.getElementById(`section-${targetResource.id}`)
+          } else {
+            element = document.getElementById(`resource-${targetResource.id}`)
+            if (!element) {
+              if (targetResource.seccion.includes("Introducción") && !isSection(targetResource)) {
+                element = document.getElementById("tour-general")
+              } else if (targetResource.seccion.includes("Tutorial Administrativo") && !isSection(targetResource)) {
+                element = document.getElementById("tutorial-admin")
+              }
+            }
+          }
           if (element) {
             element.scrollIntoView({ behavior: "smooth", block: "center" })
           }
@@ -149,6 +160,35 @@ export default function ClientesPageDynamic() {
   const [tourVideoOpen, setTourVideoOpen] = useState(false)
   // Controla el modal de video del Tutorial Administrativo
   const [tutorialVideoOpen, setTutorialVideoOpen] = useState(false)
+
+  // Tour General y Tutorial Admin no usan DynamicResourceCard; abrir modal/archivo con ?resource=<id>
+  useEffect(() => {
+    if (!autoOpenResourceId) return
+
+    const timers: ReturnType<typeof setTimeout>[] = []
+
+    if (tourGeneral && autoOpenResourceId === tourGeneral.id) {
+      const hasVideo = !!tourGeneral.url_video_youtube?.trim()
+      const hasFile = !!tourGeneral.url_archivo?.trim()
+      if (hasVideo) {
+        timers.push(setTimeout(() => setTourVideoOpen(true), 300))
+      } else if (hasFile) {
+        timers.push(setTimeout(() => window.open(tourGeneral.url_archivo, "_blank"), 300))
+      }
+    } else if (tutorialAdmin && autoOpenResourceId === tutorialAdmin.id) {
+      const hasVideo = !!tutorialAdmin.url_video_youtube?.trim()
+      const hasFile = !!tutorialAdmin.url_archivo?.trim()
+      if (hasVideo) {
+        timers.push(setTimeout(() => setTutorialVideoOpen(true), 300))
+      } else if (hasFile) {
+        timers.push(setTimeout(() => window.open(tutorialAdmin.url_archivo, "_blank"), 300))
+      }
+    }
+
+    return () => {
+      timers.forEach(clearTimeout)
+    }
+  }, [tourGeneral, tutorialAdmin, autoOpenResourceId])
 
   // Navegación del sidebar generada desde el contenido dinámico (CMS) — useMemo debe ir antes de cualquier return
   const sidebarNavItems: NavItem[] = useMemo(() => {
