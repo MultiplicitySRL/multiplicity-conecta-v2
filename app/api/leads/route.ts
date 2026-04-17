@@ -28,6 +28,7 @@ function corsHeaders(request: NextRequest): HeadersInit {
 /**
  * POST /api/leads
  * Recibe el body de un formulario externo y lo reenvía por POST al webhook de n8n.
+ * Al cliente siempre responde JSON genérico (no reexpone la respuesta de n8n).
  */
 export async function POST(request: NextRequest) {
   const cors = corsHeaders(request)
@@ -54,33 +55,24 @@ export async function POST(request: NextRequest) {
       clearTimeout(timeoutId)
     }
 
-    const upstreamText = await upstream.text()
-    const upstreamContentType = upstream.headers.get("content-type")
+    await upstream.text().catch(() => undefined)
+    if (!upstream.ok) {
+      console.error("/api/leads: n8n respondió con error", upstream.status)
+    }
 
-    return new NextResponse(upstreamText, {
-      status: upstream.status,
-      headers: {
-        ...cors,
-        ...(upstreamContentType
-          ? { "Content-Type": upstreamContentType }
-          : {}),
-        "Cache-Control": "no-store",
+    return NextResponse.json(
+      { success: true, message: "ok" },
+      {
+        status: 200,
+        headers: { ...cors, "Cache-Control": "no-store" },
       },
-    })
+    )
   } catch (err: unknown) {
-    const isAbort =
-      err instanceof Error && err.name === "AbortError"
     console.error("/api/leads:", err)
     return NextResponse.json(
+      { success: false, message: "Error temporal" },
       {
-        ok: false,
-        error: isAbort ? "timeout" : "proxy_error",
-        message: isAbort
-          ? "Tiempo de espera agotado al contactar n8n"
-          : "No se pudo reenviar el lead",
-      },
-      {
-        status: isAbort ? 504 : 502,
+        status: 503,
         headers: { ...cors, "Cache-Control": "no-store" },
       },
     )
