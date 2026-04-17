@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { FileDown, Play } from "lucide-react"
 import type { ResourceV3 } from "@/lib/resources-cms-v3"
 import { getYouTubeEmbedUrl } from "@/lib/resources-cms-v3"
+import { getResourceImageSrc } from "@/lib/supabase-storage-image"
 
 interface DynamicResourceCardProps {
   resource: ResourceV3
@@ -67,14 +68,7 @@ export function DynamicResourceCard({ resource, onComplete, autoOpen = false }: 
   // Determinar si la imagen es externa o local
   const isExternalImage = resource.imagen?.startsWith("http")
   
-  // Agregar cache-busting para imágenes externas
-  const imageSrc = (() => {
-    const baseUrl = resource.imagen || "/placeholder.svg"
-    if (!isExternalImage) return baseUrl
-    
-    const separator = baseUrl.includes("?") ? "&" : "?"
-    return `${baseUrl}${separator}v=${resource.orden}`
-  })()
+  const imageSrc = getResourceImageSrc(resource.imagen, resource.orden)
 
   return (
     <>

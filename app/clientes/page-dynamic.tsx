@@ -19,6 +19,7 @@ import { Calendar } from "lucide-react"
 import Image from "next/image"
 import type { ResourceV3 } from "@/lib/resources-cms-v3"
 import { isSection, getYouTubeEmbedUrl } from "@/lib/resources-cms-v3"
+import { getResourceImageSrc } from "@/lib/supabase-storage-image"
 
 export default function ClientesPageDynamic() {
   const searchParams = useSearchParams()
@@ -137,23 +138,12 @@ export default function ClientesPageDynamic() {
   // Imagen de banner para el Tour General (si existe en el CSV)
   const tourGeneralImageIsExternal = tourGeneral?.imagen?.startsWith("http") ?? false
   const tourGeneralImageSrc = tourGeneral?.imagen
-    ? (() => {
-        const baseUrl = tourGeneral.imagen
-        if (!tourGeneralImageIsExternal) return baseUrl
-        const separator = baseUrl.includes("?") ? "&" : "?"
-        return `${baseUrl}${separator}v=${tourGeneral.orden}`
-      })()
+    ? getResourceImageSrc(tourGeneral.imagen, tourGeneral.orden)
     : "/placeholder.svg"
 
-  // Imagen de banner para el Tutorial Administrativo
   const tutorialAdminImageIsExternal = tutorialAdmin?.imagen?.startsWith("http") ?? false
   const tutorialAdminImageSrc = tutorialAdmin?.imagen
-    ? (() => {
-        const baseUrl = tutorialAdmin.imagen
-        if (!tutorialAdminImageIsExternal) return baseUrl
-        const separator = baseUrl.includes("?") ? "&" : "?"
-        return `${baseUrl}${separator}v=${tutorialAdmin.orden}`
-      })()
+    ? getResourceImageSrc(tutorialAdmin.imagen, tutorialAdmin.orden)
     : "/placeholder.svg"
 
   // Controla el modal de video del Tour General

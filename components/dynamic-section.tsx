@@ -1,5 +1,6 @@
 import { Card } from "@/components/ui/card"
 import type { ResourceV3 } from "@/lib/resources-cms-v3"
+import { getResourceImageSrc } from "@/lib/supabase-storage-image"
 
 interface DynamicSectionProps {
   title?: string
@@ -42,17 +43,7 @@ export function DynamicSection({ title, subtitle, resources, backgroundColor = "
     }
   }
 
-  // Helper para agregar cache-busting a imágenes externas
-  const getImageSrc = (resource: ResourceV3) => {
-    const baseUrl = resource.imagen || "/placeholder.svg"
-    const isExternal = baseUrl.startsWith("http")
-    
-    if (!isExternal) return baseUrl
-    
-    // Usar el orden del recurso como versión para cache-busting
-    const separator = baseUrl.includes("?") ? "&" : "?"
-    return `${baseUrl}${separator}v=${resource.orden}`
-  }
+  const getImageSrc = (resource: ResourceV3) => getResourceImageSrc(resource.imagen, resource.orden)
 
   // Helper para obtener el color del footer según el campo color del CSV
   const getFooterColor = (resource: ResourceV3) => {
@@ -216,7 +207,7 @@ export function DynamicSection({ title, subtitle, resources, backgroundColor = "
                     className="group flex flex-col overflow-hidden rounded-3xl hover:shadow-xl transition-all duration-300 border-0 cursor-pointer p-0 gap-0"
                   >
                     <div className="relative h-64 overflow-hidden flex-shrink-0">
-                      {/* eslint-disable-next-line @next/next/next/no-img-element */}
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={getImageSrc(resource)}
                         alt={resource.titulo}
