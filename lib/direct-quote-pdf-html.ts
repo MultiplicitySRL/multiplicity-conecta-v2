@@ -1,7 +1,4 @@
-/**
- * HTML para imprimir / guardar como PDF la cotización de pruebas,
- * alineado al formato corporativo (Cotización Cliente Autogestión).
- */
+import { ITBIS_RATE, COMPANY } from "./config"
 
 export type QuotePdfTestDetail = {
   key: string
@@ -47,7 +44,6 @@ const PDF_TEAL = "#00b8a9"
 const PDF_TEAL_DEEP = "#009688"
 const PDF_TOP_BAR = "#4b5563"
 const PDF_GREY_SUM = "#6b7280"
-const ITBIS_RATE = 0.18
 
 const PDF_APPENDIX_HTML = `
 <section class="appendix">
@@ -427,11 +423,11 @@ export function buildDirectQuotePdfHtml(p: BuildDirectQuotePdfHtmlParams): strin
   <div class="brand-block">
     <img class="logo" src="${esc(origin)}/images/multiplicity-logo.png" alt="Multiplicity" />
     <div class="letterhead">
-      <p>Edif. La Isla Piso 1</p>
-      <p>Avenida Tiradentes #30</p>
-      <p>Santo Domingo, Rep. Dominicana</p>
-      <p>Tel.: 809-565-0747</p>
-      <p>R.N.C. 124-03034-1</p>
+      <p>${esc(COMPANY.address1)}</p>
+      <p>${esc(COMPANY.address2)}</p>
+      <p>${esc(COMPANY.city)}</p>
+      <p>Tel.: ${esc(COMPANY.phone)}</p>
+      <p>R.N.C. ${esc(COMPANY.rnc)}</p>
     </div>
   </div>
 

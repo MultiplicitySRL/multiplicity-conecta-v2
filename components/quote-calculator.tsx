@@ -11,63 +11,8 @@ import ScenarioCard from "./scenario-card"
 import ObservationsSection from "./observations-section"
 import Image from "next/image"
 import { useUser } from "@/lib/user-context"
-
-const BASE_PRICES = {
-  competenciaPlus: 37.5,
-  pensamientoAnalitico: 15.0,
-  motivadores: 22.5,
-  competenciasBasicas: 8.0,
-  razonamientoGeneral: 1.0,
-}
-
-const PRICING_TIERS = {
-  razonamientoGeneral: [
-    { limit: 1500, price: 1.0 },
-    { limit: 99999, price: 0.5 },
-  ],
-  competenciasBasicas: [
-    { limit: 500, price: 8.0 },
-    { limit: 1000, price: 7.2 },
-    { limit: 1500, price: 6.85 },
-    { limit: 2000, price: 6.5 },
-    { limit: 4000, price: 6.0 },
-    { limit: 6000, price: 5.5 },
-    { limit: 99999, price: 5.25 },
-  ],
-  motivadores: [
-    { limit: 10, price: 22.5 },
-    { limit: 20, price: 20.25 },
-    { limit: 30, price: 19.13 },
-    { limit: 50, price: 18.0 },
-    { limit: 200, price: 16.88 },
-    { limit: 500, price: 15.75 },
-    { limit: 1000, price: 14.63 },
-    { limit: 1500, price: 13.5 },
-    { limit: 99999, price: 12.38 },
-  ],
-  pensamientoAnalitico: [
-    { limit: 10, price: 15.0 },
-    { limit: 20, price: 13.5 },
-    { limit: 30, price: 12.75 },
-    { limit: 50, price: 12.0 },
-    { limit: 200, price: 11.25 },
-    { limit: 500, price: 10.5 },
-    { limit: 1000, price: 9.75 },
-    { limit: 1500, price: 9.0 },
-    { limit: 99999, price: 8.25 },
-  ],
-  competenciaPlus: [
-    { limit: 10, price: 37.5 },
-    { limit: 20, price: 33.75 },
-    { limit: 30, price: 31.875 },
-    { limit: 50, price: 30.0 },
-    { limit: 200, price: 28.125 },
-    { limit: 500, price: 26.25 },
-    { limit: 1000, price: 24.375 },
-    { limit: 1500, price: 22.5 },
-    { limit: 99999, price: 20.625 },
-  ],
-}
+import { submitProspectQuote } from "@/lib/services/quotes"
+import { BASE_PRICES, PRICING_TIERS, ITBIS_RATE, EXCHANGE_RATE_USD_DOP, EXCHANGE_RATE_EUR_REF } from "@/lib/config"
 
 function calculateTieredPrice(testType: string, quantity: number): { total: number; avgPrice: number } {
   if (quantity === 0) return { total: 0, avgPrice: 0 }
@@ -112,8 +57,6 @@ function getPriceByVolume(testType: string, quantity: number): number {
   return avgPrice
 }
 
-const ITBIS_RATE = 0.18
-
 function calculateVolumeDiscount(totalTests: number): number {
   if (totalTests >= 500) return 0.25
   if (totalTests >= 300) return 0.2
@@ -128,8 +71,8 @@ type QuoteCalculatorProps = {
 }
 
 export default function QuoteCalculator({
-  exchangeRateUSD = 60.4055,
-  exchangeRateEUR = 70.305336,
+  exchangeRateUSD = EXCHANGE_RATE_USD_DOP,
+  exchangeRateEUR = EXCHANGE_RATE_EUR_REF,
 }: QuoteCalculatorProps = {}) {
   const user = useUser()
   const [currentStep, setCurrentStep] = useState(1)
@@ -264,8 +207,6 @@ export default function QuoteCalculator({
     setIsSubmitted(true)
   }
 
-  const WEBHOOK_URL = "https://n8n.srv1464241.hstgr.cloud/webhook/9a79886b-c75b-4fd1-a17a-99b88daf4c9c"
-
   const handleFormComplete = async (payload: Record<string, unknown>) => {
     const fullPayload = {
       ...payload,
@@ -281,11 +222,7 @@ export default function QuoteCalculator({
       responsable_email: user?.email || "",
     }
     try {
-      await fetch(WEBHOOK_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(fullPayload),
-      })
+      await submitProspectQuote(fullPayload)
     } catch (_e) {
       // Opcional: mostrar toast de error
     }

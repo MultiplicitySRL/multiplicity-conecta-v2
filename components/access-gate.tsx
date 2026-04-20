@@ -6,9 +6,7 @@ import Image from "next/image"
 import { AccessRequestForm } from "@/components/access-request-form"
 import { UserContext, type UserInfo } from "@/lib/user-context"
 import { Loader2 } from "lucide-react"
-
-const VERIFY_TOKEN_WEBHOOK =
-  "https://n8n.srv1464241.hstgr.cloud/webhook/15e34de7-47e2-4fb7-a74d-e79de1c95fa8"
+import { verifyAccessToken, type LeadUserInfo } from "@/lib/services/leads"
 
 const STORAGE_KEY = "multiplicity_access"
 const TOKEN_TTL_MS = 48 * 60 * 60 * 1000 // 2 días
@@ -34,23 +32,13 @@ function getStoredAccess(): StoredAccess | null {
   }
 }
 
-interface AirtableRecord {
-  id: string
-  createdTime: string
-  "Nombre Completo": string
-  Cargo: string
-  Email: string
-  Empresa: string[]
-}
-
-function parseUserFromResponse(data: AirtableRecord[]): UserInfo {
-  const record = data[0]
+function parseUserFromResponse(data: LeadUserInfo): UserInfo {
   return {
-    id: record.id ?? "",
-    nombre: record["Nombre Completo"] ?? "",
-    email: record["Email"] ?? "",
-    cargo: record["Cargo"] ?? "",
-    empresa: Array.isArray(record["Empresa"]) ? record["Empresa"][0] ?? "" : record["Empresa"] ?? "",
+    id: data.id ?? "",
+    nombre: data.nombreCompleto ?? "",
+    email: data.email ?? "",
+    cargo: data.cargo ?? "",
+    empresa: data.empresa ?? "",
   }
 }
 
@@ -77,28 +65,12 @@ export function AccessGate({ children }: AccessGateProps) {
     const verify = async () => {
       if (urlToken) {
         try {
-          const res = await fetch(VERIFY_TOKEN_WEBHOOK, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ token: urlToken }),
-          })
-
-          if (res.ok) {
-            const raw = await res.json()
-            // n8n puede devolver un objeto directo o un array
-            const records: AirtableRecord[] = Array.isArray(raw) ? raw : [raw]
-            if (records.length === 0 || !records[0]?.id) {
-              setAccessState("denied")
-              return
-            }
-            const userInfo = parseUserFromResponse(records)
-            saveAccess(urlToken, userInfo)
-            setUser(userInfo)
-            router.replace("/")
-            setAccessState("granted")
-          } else {
-            setAccessState("denied")
-          }
+          const data = await verifyAccessToken(urlToken)
+          const userInfo = parseUserFromResponse(data)
+          saveAccess(urlToken, userInfo)
+          setUser(userInfo)
+          router.replace("/")
+          setAccessState("granted")
         } catch {
           setAccessState("denied")
         }
@@ -113,17 +85,9 @@ export function AccessGate({ children }: AccessGateProps) {
         setAccessState("granted")
 
         // Refrescar datos en segundo plano sin bloquear la UI
-        fetch(VERIFY_TOKEN_WEBHOOK, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ token: stored.token }),
-        })
-          .then((res) => (res.ok ? res.json() : null))
-          .then((raw) => {
-            if (!raw) return
-            const records: AirtableRecord[] = Array.isArray(raw) ? raw : [raw]
-            if (records.length === 0 || !records[0]?.id) return
-            const freshUser = parseUserFromResponse(records)
+        verifyAccessToken(stored.token)
+          .then((data) => {
+            const freshUser = parseUserFromResponse(data)
             saveAccess(stored.token, freshUser)
             setUser(freshUser)
           })

@@ -5,9 +5,7 @@ import QuoteCalculator from "@/components/quote-calculator"
 import Image from "next/image"
 import { Footer } from "@/components/footer"
 import { AccessGate } from "@/components/access-gate"
-
-const EXCHANGE_RATE_USD_DOP = 60.4055
-const EXCHANGE_RATE_EUR_REF = 70.305336
+import { EXCHANGE_RATE_USD_DOP, EXCHANGE_RATE_EUR_REF } from "@/lib/config"
 
 export default function CotizarPage() {
   return (

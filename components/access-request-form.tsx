@@ -7,9 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { CheckCircle2, Loader2, AlertCircle } from "lucide-react"
-
-const LEAD_FORM_WEBHOOK =
-  "https://n8n.srv1464241.hstgr.cloud/webhook/9cfe0b76-ed98-426a-86cf-35f110fa7ef5"
+import { registerLead } from "@/lib/services/leads"
 
 const BLOCKED_DOMAINS = [
   "gmail.com", "googlemail.com",
@@ -52,11 +50,7 @@ export function AccessRequestForm({ compact = false }: AccessRequestFormProps) {
   const onSubmit = async (data: FormValues) => {
     setFormState("submitting")
     try {
-      await fetch(LEAD_FORM_WEBHOOK, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      })
+      await registerLead(data)
       setFormState("success")
     } catch {
       setFormState("error")

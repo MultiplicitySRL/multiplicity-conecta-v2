@@ -1,14 +1,14 @@
-const ALEGRA_BASE = "https://api.alegra.com/api/v1"
-const ALEGRA_EMAIL = "ingcarlosoficial@gmail.com"
-const ALEGRA_TOKEN = ""
-
+import { ALEGRA_BASE_URL, ALEGRA_DEFAULT_EMAIL_MESSAGE } from "./config"
 import { buildInvoicePayload } from "./alegra-invoice-payload"
 import type { CreateInvoiceInput } from "./alegra-invoice-payload"
+
+const ALEGRA_EMAIL = "ingcarlosoficial@gmail.com"
+const ALEGRA_TOKEN = ""
 
 const auth = "Basic " + Buffer.from(`${ALEGRA_EMAIL}:${ALEGRA_TOKEN}`).toString("base64")
 
 async function http(path: string, init: RequestInit = {}) {
-  const res = await fetch(`${ALEGRA_BASE}${path}`, {
+  const res = await fetch(`${ALEGRA_BASE_URL}${path}`, {
     ...init,
     headers: {
       Authorization: auth,
@@ -65,7 +65,7 @@ export async function createAndEmailAlegraInvoice(input: CreateInvoiceInput) {
     method: "POST",
     body: JSON.stringify({
       emails: [toEmail],
-      message: "¡Hola! Te compartimos tu factura. Gracias por su compra.",
+      message: ALEGRA_DEFAULT_EMAIL_MESSAGE,
     }),
   })
 

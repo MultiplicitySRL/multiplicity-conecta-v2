@@ -5,7 +5,7 @@ import type { CompanyResponse, CompanyError } from "@/lib/types/company"
 export const dynamic = "force-dynamic"
 export const revalidate = 0
 
-const API_BASE_URL = "https://staging.multiplicityassess.com/api/admin"
+const API_BASE_URL = "https://multiplicityassess.com/api/admin"
 const REQUEST_TIMEOUT = 10000 // 10 segundos
 
 /**

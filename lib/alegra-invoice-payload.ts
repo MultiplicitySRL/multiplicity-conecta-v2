@@ -1,7 +1,4 @@
-/**
- * Lógica pura para armar el payload de factura de Alegra.
- * Sin llamadas HTTP ni dependencias de Node; usable en cliente y servidor.
- */
+import { EXCHANGE_RATE_USD_DOP, ALEGRA_ITBIS_TAX_ID, ALEGRA_DEFAULT_INVOICE_STATUS } from "./config"
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100
@@ -35,7 +32,7 @@ export type CreateInvoiceInput = {
   companyType?: "local" | "international"
 }
 
-const DEFAULT_EXCHANGE_RATE = 60.4055
+const DEFAULT_EXCHANGE_RATE = EXCHANGE_RATE_USD_DOP
 
 /**
  * Construye el payload para crear una factura en Alegra.
@@ -58,7 +55,7 @@ export function buildInvoicePayload(input: CreateInvoiceInput, contactId: number
     client: { id: contactId },
     date: input.issueDate,
     dueDate: input.dueDate,
-    status: "draft",
+    status: ALEGRA_DEFAULT_INVOICE_STATUS,
     ...currencyField,
     items: input.items.map((it) => ({
       ...(it.id != null ? { id: it.id } : { name: it.name }),
@@ -66,7 +63,7 @@ export function buildInvoicePayload(input: CreateInvoiceInput, contactId: number
       quantity: it.quantity,
       ...(it.discount != null ? { discount: round2(it.discount) } : {}),
       ...(input.companyType === "local"
-        ? { tax: [{ id: "1" }] }
+        ? { tax: [{ id: ALEGRA_ITBIS_TAX_ID }] }
         : {}),
     })),
     ...(input.notes ? { observations: "" } : {}),

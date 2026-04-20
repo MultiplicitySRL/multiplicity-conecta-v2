@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
+import { TEST_NAMES, ALEGRA_TEST_IDS } from "@/lib/config"
 
 interface DirectScenarioCardProps {
   tests: {
@@ -35,22 +36,6 @@ interface DirectScenarioCardProps {
   exchangeRateEUR: number
   companyType: "local" | "international"
   onSelect: () => void
-}
-
-const TEST_NAMES = {
-  competenciaPlus: "Test Competencias Plus",
-  pensamientoAnalitico: "Test Pens. Analítico y Sistémico",
-  motivadores: "Test Motivadores",
-  competenciasBasicas: "Test Competencias Básicas",
-  razonamientoGeneral: "Test Razonamiento General",
-}
-
-const ALEGRA_TEST_IDS: Record<string, number> = {
-  "Test Competencias Plus": 1,
-  "Test Pens. Analítico y Sistémico": 2,
-  "Test Motivadores": 3,
-  "Test Competencias Básicas": 4,
-  "Test Razonamiento General": 5,
 }
 
 export default function DirectScenarioCard({

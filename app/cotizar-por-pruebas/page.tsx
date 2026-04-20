@@ -9,9 +9,7 @@ import { useEmbedSecurity } from "@/hooks/use-embed-security"
 import { BlockedAccessScreen } from "@/components/blocked-access-screen"
 import { Loader2 } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-
-const EXCHANGE_RATE_USD_DOP = 60.4055
-const EXCHANGE_RATE_EUR_REF = 70.305336
+import { EXCHANGE_RATE_USD_DOP, EXCHANGE_RATE_EUR_REF } from "@/lib/config"
 
 type AlegraClientInfo = {
   id: string
@@ -104,9 +102,7 @@ function CotizarPorPruebasContent() {
     if (!companyId) return
     const controller = new AbortController()
     setIsLoadingClientInfo(true)
-    const url = new URL("https://n8n.srv1464241.hstgr.cloud/webhook/22557e2d-6273-4070-9332-ab34dc412d86")
-    url.searchParams.set("client_id", companyId)
-    fetch(url.toString(), { method: "GET", signal: controller.signal })
+    fetch(`/api/alegra/client?client_id=${encodeURIComponent(companyId)}`, { method: "GET", signal: controller.signal })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data) {
@@ -130,12 +126,7 @@ function CotizarPorPruebasContent() {
       setIsLoadingInvoices(true)
       setInvoicesError(null)
 
-      const url = new URL(
-        "https://n8n.srv1464241.hstgr.cloud/webhook/472160fc-1174-4f8e-98ac-dd6304bc7eed",
-      )
-      url.searchParams.set("client_id", invoiceClientId)
-
-      const res = await fetch(url.toString(), {
+      const res = await fetch(`/api/alegra/invoices?client_id=${encodeURIComponent(invoiceClientId)}`, {
         method: "GET",
         signal,
       })
@@ -239,6 +230,7 @@ function CotizarPorPruebasContent() {
                 invoiceResolution={clientInfo?.defaultInvoiceResolution ?? null}
                 clientCountry={clientInfo?.country ?? null}
                 clientName={clientInfo?.name ?? null}
+                clientEmail={clientInfo?.email ?? null}
                 onSuccess={() => void fetchInvoices()}
                 exchangeRateUSD={EXCHANGE_RATE_USD_DOP}
                 exchangeRateEUR={EXCHANGE_RATE_EUR_REF}

@@ -17,6 +17,7 @@ import { buildInvoicePayload } from "@/lib/alegra-invoice-payload"
 import type { CreateInvoiceInput } from "@/lib/alegra-invoice-payload"
 import { buildDirectQuotePdfHtml, type QuotePdfCalculations } from "@/lib/direct-quote-pdf-html"
 import { downloadHtmlAsPdf } from "@/lib/download-quote-pdf"
+import { TEST_NAMES, ALEGRA_TEST_IDS, NCF_TIPO_ID, NCF_ALLOWED_LOCAL } from "@/lib/config"
 
 interface ScenarioCardProps {
   scenario: {
@@ -48,22 +49,6 @@ interface ScenarioCardProps {
   companyType: "local" | "international"
   onSelect?: (scenarioId: number) => void
   onFormComplete?: (data: Record<string, unknown>) => void
-}
-
-const TEST_NAMES = {
-  competenciaPlus: "Test Competencias Plus",
-  pensamientoAnalitico: "Test Pens. Analítico y Sistémico",
-  motivadores: "Test Motivadores",
-  competenciasBasicas: "Test Competencias Básicas",
-  razonamientoGeneral: "Test Razonamiento General",
-}
-
-const ALEGRA_TEST_IDS: Record<string, number> = {
-  "Test Competencias Plus": 1,
-  "Test Pens. Analítico y Sistémico": 2,
-  "Test Motivadores": 3,
-  "Test Competencias Básicas": 4,
-  "Test Razonamiento General": 5,
 }
 
 export default function ScenarioCard({
@@ -112,20 +97,7 @@ export default function ScenarioCard({
   const [direction, setDirection] = useState(1) // 1 = forward, -1 = backward
   const [returnToReview, setReturnToReview] = useState(false)
 
-  const getTipoNCFId = (tipoNCF: string): string | null => {
-    switch (tipoNCF) {
-      case "Crédito Fiscal":
-        return "1"
-      case "Consumo":
-        return "2"
-      case "Gubernamental":
-        return "4"
-      case "Régimen Especial de Tributación":
-        return "3"
-      default:
-        return null
-    }
-  }
+  const getTipoNCFId = (tipoNCF: string): string | null => NCF_TIPO_ID[tipoNCF] ?? null
 
   useEffect(() => {
     // NCF depende del tipo de empresa:
@@ -139,8 +111,7 @@ export default function ScenarioCard({
     }
 
     // companyType === "local"
-    const allowedLocal = ["Crédito Fiscal", "Gubernamental", "Régimen Especial de Tributación"]
-    if (!formData.tipoNCF || !allowedLocal.includes(formData.tipoNCF)) {
+    if (!formData.tipoNCF || !NCF_ALLOWED_LOCAL.includes(formData.tipoNCF as typeof NCF_ALLOWED_LOCAL[number])) {
       setFormData((prev) => ({ ...prev, tipoNCF: "Crédito Fiscal" }))
     }
   }, [companyType, formData.tipoNCF])
@@ -456,6 +427,10 @@ Responsabilidades de Multiplicity:
         total: calculations.total,
         symbol: calculations.symbol,
         totalTests: calculations.totalTests,
+        testDetails: calculations.testDetails,
+        applyTax: companyType === "local",
+        exchangeRateUSD,
+        exchangeRateEUR,
       },
       formData: { ...formData, tipoNCFId },
       alegraInvoicePayload,

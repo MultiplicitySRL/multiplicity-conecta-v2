@@ -13,79 +13,15 @@ import { buildInvoicePayload } from "@/lib/alegra-invoice-payload"
 import type { CreateInvoiceInput } from "@/lib/alegra-invoice-payload"
 import { buildDirectQuotePdfHtml } from "@/lib/direct-quote-pdf-html"
 import { downloadHtmlAsPdf } from "@/lib/download-quote-pdf"
-
-const ALEGRA_TEST_IDS: Record<string, number> = {
-  "Test Competencias Plus": 1,
-  "Test Pens. Analítico y Sistémico": 2,
-  "Test Motivadores": 3,
-  "Test Competencias Básicas": 4,
-  "Test Razonamiento General": 5,
-}
-
-const BASE_PRICES = {
-  competenciaPlus: 37.5,
-  pensamientoAnalitico: 15.0,
-  motivadores: 22.5,
-  competenciasBasicas: 8.0,
-  razonamientoGeneral: 1.0,
-}
-
-const PRICING_TIERS = {
-  razonamientoGeneral: [
-    { limit: 1500, price: 1.0 },
-    { limit: 99999, price: 0.5 },
-  ],
-  competenciasBasicas: [
-    { limit: 500, price: 8.0 },
-    { limit: 1000, price: 7.2 },
-    { limit: 1500, price: 6.85 },
-    { limit: 2000, price: 6.5 },
-    { limit: 4000, price: 6.0 },
-    { limit: 6000, price: 5.5 },
-    { limit: 99999, price: 5.25 },
-  ],
-  motivadores: [
-    { limit: 10, price: 22.5 },
-    { limit: 20, price: 20.25 },
-    { limit: 30, price: 19.13 },
-    { limit: 50, price: 18.0 },
-    { limit: 200, price: 16.88 },
-    { limit: 500, price: 15.75 },
-    { limit: 1000, price: 14.63 },
-    { limit: 1500, price: 13.5 },
-    { limit: 99999, price: 12.38 },
-  ],
-  pensamientoAnalitico: [
-    { limit: 10, price: 15.0 },
-    { limit: 20, price: 13.5 },
-    { limit: 30, price: 12.75 },
-    { limit: 50, price: 12.0 },
-    { limit: 200, price: 11.25 },
-    { limit: 500, price: 10.5 },
-    { limit: 1000, price: 9.75 },
-    { limit: 1500, price: 9.0 },
-    { limit: 99999, price: 8.25 },
-  ],
-  competenciaPlus: [
-    { limit: 10, price: 37.5 },
-    { limit: 20, price: 33.75 },
-    { limit: 30, price: 31.875 },
-    { limit: 50, price: 30.0 },
-    { limit: 200, price: 28.125 },
-    { limit: 500, price: 26.25 },
-    { limit: 1000, price: 24.375 },
-    { limit: 1500, price: 22.5 },
-    { limit: 99999, price: 20.625 },
-  ],
-}
-
-const TEST_NAMES = {
-  competenciaPlus: "Test Competencias Plus",
-  pensamientoAnalitico: "Test Pens. Analítico y Sistémico",
-  motivadores: "Test Motivadores",
-  competenciasBasicas: "Test Competencias Básicas",
-  razonamientoGeneral: "Test Razonamiento General",
-}
+import {
+  ALEGRA_TEST_IDS,
+  BASE_PRICES,
+  PRICING_TIERS,
+  TEST_NAMES,
+  ITBIS_RATE,
+  EXCHANGE_RATE_USD_DOP,
+  EXCHANGE_RATE_EUR_REF,
+} from "@/lib/config"
 
 function calculateTieredPrice(testType: string, quantity: number): { total: number; avgPrice: number } {
   if (quantity === 0) return { total: 0, avgPrice: 0 }
@@ -117,8 +53,6 @@ function calculateTieredPrice(testType: string, quantity: number): { total: numb
   return { total, avgPrice }
 }
 
-const ITBIS_RATE = 0.18
-
 interface DirectQuoteCalculatorProps {
   companyId: string | null
   accountId: string | null
@@ -126,6 +60,8 @@ interface DirectQuoteCalculatorProps {
   clientCountry?: string | null
   /** Nombre de la empresa en Alegra (misma línea que el correo de confirmación). */
   clientName?: string | null
+  /** Email del cliente en Alegra; destino del correo de confirmación. */
+  clientEmail?: string | null
   onSuccess?: () => void
   /** RD$ por 1 USD (referencia para UI y factura en DOP). */
   exchangeRateUSD?: number
@@ -173,9 +109,10 @@ export default function DirectQuoteCalculator({
   invoiceResolution,
   clientCountry,
   clientName,
+  clientEmail,
   onSuccess,
-  exchangeRateUSD = 60.4055,
-  exchangeRateEUR = 70.305336,
+  exchangeRateUSD = EXCHANGE_RATE_USD_DOP,
+  exchangeRateEUR = EXCHANGE_RATE_EUR_REF,
 }: DirectQuoteCalculatorProps) {
   const [showDetailsDialog, setShowDetailsDialog] = useState(false)
   const [currency, setCurrency] = useState("USD")
@@ -418,6 +355,10 @@ Total: ${formatCurrencyForNotes(calculations.total, calculations.symbol)}`
           total: calculations.total,
           symbol: calculations.symbol,
           totalTests: calculations.totalTests,
+          testDetails: calculations.testDetails,
+          applyTax: calculations.applyTax,
+          exchangeRateUSD,
+          exchangeRateEUR,
         },
         scenarioTests: {
           competenciaPlus: calculations.tests.competenciaPlus,
@@ -428,17 +369,23 @@ Total: ${formatCurrencyForNotes(calculations.total, calculations.symbol)}`
         },
         companyId: companyId ?? null,
         accountId: accountId ?? null,
+        clientCountry: clientCountry ?? null,
+        invoiceResolution: invoiceResolution ?? null,
+        clientName: clientName ?? null,
+        requesterEmail: clientEmail ?? null,
         alegraInvoicePayload,
       }
 
-      const response = await fetch(
-        "https://n8n.srv1464241.hstgr.cloud/webhook/286a3992-68a5-4ee7-a318-c25a6f4de689",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(fullPayload),
+      const crmUrl = process.env.NEXT_PUBLIC_CRM_API_URL ?? ""
+      const webhookToken = process.env.NEXT_PUBLIC_FRONTEND_WEBHOOK_TOKEN ?? ""
+      const response = await fetch(`${crmUrl}/api/invoice-requests`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(webhookToken ? { Authorization: `Bearer ${webhookToken}` } : {}),
         },
-      )
+        body: JSON.stringify(fullPayload),
+      })
 
       if (!response.ok) {
         throw new Error(`Error al enviar la cotización: ${response.status}`)
