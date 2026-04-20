@@ -75,11 +75,11 @@ export const TEST_NAMES = {
 } as const
 
 export const ALEGRA_TEST_IDS: Record<string, number> = {
-  "Test Competencias Plus": 1,
-  "Test Pens. Analítico y Sistémico": 2,
-  "Test Motivadores": 3,
-  "Test Competencias Básicas": 4,
-  "Test Razonamiento General": 5,
+  "Test Competencias Plus": 140,
+  "Test Pens. Analítico y Sistémico": 141,
+  "Test Motivadores": 142,
+  "Test Competencias Básicas": 143,
+  "Test Razonamiento General": 144,
 }
 
 export const ALEGRA_ITBIS_TAX_ID = "1"
@@ -87,10 +87,10 @@ export const ALEGRA_DEFAULT_INVOICE_STATUS = "draft"
 export const ALEGRA_DEFAULT_EMAIL_MESSAGE = "¡Hola! Te compartimos tu factura. Gracias por su compra."
 
 export const NCF_TIPO_ID: Record<string, string> = {
-  "Crédito Fiscal": "1",
-  "Consumo": "2",
-  "Régimen Especial de Tributación": "3",
-  "Gubernamental": "4",
+  "Crédito Fiscal": "22",
+  "Consumo": "17",
+  "Régimen Especial de Tributación": "23",
+  "Gubernamental": "24",
 }
 
 export const NCF_ALLOWED_LOCAL = ["Crédito Fiscal", "Gubernamental", "Régimen Especial de Tributación"] as const

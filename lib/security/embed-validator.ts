@@ -4,7 +4,7 @@
  */
 
 export const ALLOWED_EMBED_ORIGINS = [
-  'https://multiplicityassess.com',
+  'https://multiplicityassess.com', "https://www.multiplicityassess.com",
   // En desarrollo, permitir localhost
   ...(process.env.NODE_ENV === 'development' ? [
     'http://localhost:3000',
