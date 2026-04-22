@@ -101,7 +101,10 @@ function CotizarPorPruebasContent() {
 
   console.log("companyId", companyId)
   console.log("accountId", accountId)
-  console.log(searchParams.entries())
+  // Mostrar por consola todos los query recibidos de searchParams
+  for (const [key, value] of searchParams.entries()) {
+    console.log(`query param: ${key} = ${value}`)
+  }
 
   useEffect(() => {
     if (!companyId) return
