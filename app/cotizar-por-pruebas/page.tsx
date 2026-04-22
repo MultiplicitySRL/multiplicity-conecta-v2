@@ -98,6 +98,10 @@ function CotizarPorPruebasContent() {
   const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false)
   const [visiblePendingInvoicesCount, setVisiblePendingInvoicesCount] = useState(5)
 
+
+  console.log("companyId", companyId)
+  console.log("accountId", accountId)
+
   useEffect(() => {
     if (!companyId) return
     const controller = new AbortController()
