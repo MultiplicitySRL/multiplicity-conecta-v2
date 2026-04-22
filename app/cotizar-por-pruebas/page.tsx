@@ -101,6 +101,7 @@ function CotizarPorPruebasContent() {
 
   console.log("companyId", companyId)
   console.log("accountId", accountId)
+  console.log(searchParams)
 
   useEffect(() => {
     if (!companyId) return
