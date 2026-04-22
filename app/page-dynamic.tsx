@@ -19,6 +19,7 @@ import Link from "next/link"
 import { Footer } from "@/components/footer"
 import { AccessGate } from "@/components/access-gate"
 import { useUser } from "@/lib/user-context"
+import { trackDemoRequested } from "@/lib/services/tracking"
 import type { LandingItem } from "@/lib/landing-cms"
 import { isLandingSection, getSectionItems, getSectionHeader } from "@/lib/landing-cms"
 
@@ -556,41 +557,10 @@ function DynamicDemoSection({ header, items }: { header?: LandingItem; items: La
     e.preventDefault()
     setIsSubmitting(true)
     try {
-      const randomId = crypto.randomUUID()
-      const payload = {
-        id: randomId,
-        descripcion: "Crea el Negocio, con el demo y los participantes y responsable del demo el cual es el contacto principal del negocio",
-        responsable_id: user?.id || "",
-        responsable_nombre: user?.nombre || "",
-        responsable_email: user?.email || "",
-        responsable_cargo: user?.cargo || "",
-        empresa_id: user?.empresa || "",
-        participante1_nombre: participants[0]?.nombre || "",
-        participante1_apellido: participants[0]?.apellido || "",
-        participante1_posicion: participants[0]?.posicion || "",
-        participante1_email: participants[0]?.email || "",
-        participante2_nombre: participants[1]?.nombre || "",
-        participante2_apellido: participants[1]?.apellido || "",
-        participante2_posicion: participants[1]?.posicion || "",
-        participante2_email: participants[1]?.email || "",
-        participante3_nombre: participants[2]?.nombre || "",
-        participante3_apellido: participants[2]?.apellido || "",
-        participante3_posicion: participants[2]?.posicion || "",
-        participante3_email: participants[2]?.email || "",
-        participante4_nombre: participants[3]?.nombre || "",
-        participante4_apellido: participants[3]?.apellido || "",
-        participante4_posicion: participants[3]?.posicion || "",
-        participante4_email: participants[3]?.email || "",
-        participante5_nombre: participants[4]?.nombre || "",
-        participante5_apellido: participants[4]?.apellido || "",
-        participante5_posicion: participants[4]?.posicion || "",
-        participante5_email: participants[4]?.email || "",
-      }
-      const response = await fetch(
-        "https://n8n.srv1464241.hstgr.cloud/webhook/4e292a4c-ff0b-440f-ba99-02d0ccfc0e7c",
-        { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }
-      )
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+      const storedRaw = localStorage.getItem("multiplicity_access")
+      const token: string = storedRaw ? (JSON.parse(storedRaw) as { token: string }).token : ""
+      const validParticipants = participants.filter((p) => p.nombre.trim() && p.email.trim())
+      await trackDemoRequested({ token, participants: validParticipants })
       setIsSubmitted(true)
     } catch (error) {
       console.error("Error sending demo request:", error)

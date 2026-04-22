@@ -12,6 +12,7 @@ import ObservationsSection from "./observations-section"
 import Image from "next/image"
 import { useUser } from "@/lib/user-context"
 import { submitProspectQuote } from "@/lib/services/quotes"
+import { trackProposalAccepted } from "@/lib/services/tracking"
 import { BASE_PRICES, PRICING_TIERS, ITBIS_RATE, EXCHANGE_RATE_USD_DOP, EXCHANGE_RATE_EUR_REF } from "@/lib/config"
 
 function calculateTieredPrice(testType: string, quantity: number): { total: number; avgPrice: number } {
@@ -223,6 +224,9 @@ export default function QuoteCalculator({
     }
     try {
       await submitProspectQuote(fullPayload)
+      const storedRaw = localStorage.getItem("multiplicity_access")
+      const token: string = storedRaw ? (JSON.parse(storedRaw) as { token: string }).token : ""
+      if (token) trackProposalAccepted(token).catch(console.error)
     } catch (_e) {
       // Opcional: mostrar toast de error
     }

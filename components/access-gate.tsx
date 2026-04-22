@@ -7,6 +7,7 @@ import { AccessRequestForm } from "@/components/access-request-form"
 import { UserContext, type UserInfo } from "@/lib/user-context"
 import { Loader2 } from "lucide-react"
 import { verifyAccessToken, type LeadUserInfo } from "@/lib/services/leads"
+import { trackProposalOpened } from "@/lib/services/tracking"
 
 const STORAGE_KEY = "multiplicity_access"
 const TOKEN_TTL_MS = 48 * 60 * 60 * 1000 // 2 días
@@ -68,6 +69,7 @@ export function AccessGate({ children }: AccessGateProps) {
           const data = await verifyAccessToken(urlToken)
           const userInfo = parseUserFromResponse(data)
           saveAccess(urlToken, userInfo)
+          trackProposalOpened(urlToken).catch(console.error)
           setUser(userInfo)
           router.replace("/")
           setAccessState("granted")
