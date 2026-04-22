@@ -55,12 +55,10 @@ function calculateTieredPrice(testType: string, quantity: number): { total: numb
 
 interface DirectQuoteCalculatorProps {
   companyId: string | null
-  accountId: string | null
+  account: string | null
   invoiceResolution?: string | null
   clientCountry?: string | null
-  /** Nombre de la empresa en Alegra (misma línea que el correo de confirmación). */
   clientName?: string | null
-  /** Email del cliente en Alegra; destino del correo de confirmación. */
   clientEmail?: string | null
   onSuccess?: () => void
   /** RD$ por 1 USD (referencia para UI y factura en DOP). */
@@ -105,7 +103,7 @@ function isLocalDominicanCountry(country: string | null | undefined): boolean {
 
 export default function DirectQuoteCalculator({
   companyId,
-  accountId,
+  account,
   invoiceResolution,
   clientCountry,
   clientName,
@@ -330,7 +328,7 @@ Total: ${formatCurrencyForNotes(calculations.total, calculations.symbol)}`
 
       const alegraInput: CreateInvoiceInput = {
         customer: {
-          name: companyId ? `Empresa ID: ${companyId}` : accountId ? `Cuenta ID: ${accountId}` : "Cliente directo",
+          name: companyId ? `Empresa ID: ${companyId}` : account ? `Cuenta ID: ${account}` : "Cliente directo",
         },
         items: alegraItems,
         ...currencyOverride,
@@ -338,7 +336,7 @@ Total: ${formatCurrencyForNotes(calculations.total, calculations.symbol)}`
         dueDate,
         notes,
         companyType: calculations.applyTax ? "local" : "international",
-        externalRef: `DIRECT-QUOTE-${companyId ?? accountId ?? "unknown"}-${Date.now()}`,
+        externalRef: `DIRECT-QUOTE-${companyId ?? account ?? "unknown"}-${Date.now()}`,
       }
 
       const alegraInvoicePayload = buildInvoicePayload(alegraInput, 0)
@@ -368,7 +366,7 @@ Total: ${formatCurrencyForNotes(calculations.total, calculations.symbol)}`
           razonamientoGeneral: calculations.tests.razonamientoGeneral,
         },
         companyId: companyId ?? null,
-        accountId: accountId ?? null,
+        account: account ?? null,
         clientCountry: clientCountry ?? null,
         invoiceResolution: invoiceResolution ?? null,
         clientName: clientName ?? null,

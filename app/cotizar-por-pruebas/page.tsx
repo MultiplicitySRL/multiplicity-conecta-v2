@@ -85,8 +85,8 @@ function CotizarPorPruebasContent() {
   const embedSecurity = useEmbedSecurity()
   
   const companyId = searchParams.get("company_id")
-  const accountId = searchParams.get("account_id")
-  const invoiceClientId = companyId ?? accountId
+  const account = searchParams.get("account")
+  const invoiceClientId = companyId ?? account
 
   const [clientInfo, setClientInfo] = useState<AlegraClientInfo | null>(null)
   const [isLoadingClientInfo, setIsLoadingClientInfo] = useState(false)
@@ -100,8 +100,8 @@ function CotizarPorPruebasContent() {
 
 
   console.log("companyId", companyId)
-  console.log("accountId", accountId)
-  console.log(Object.fromEntries(searchParams)) 
+  console.log("account", account)
+  console.log(Object.fromEntries(searchParams))
 
   useEffect(() => {
     if (!companyId) return
@@ -231,7 +231,7 @@ function CotizarPorPruebasContent() {
             ) : (
               <DirectQuoteCalculator
                 companyId={companyId}
-                accountId={accountId}
+                account={account}
                 invoiceResolution={clientInfo?.defaultInvoiceResolution ?? null}
                 clientCountry={clientInfo?.country ?? null}
                 clientName={clientInfo?.name ?? null}
