@@ -51,6 +51,7 @@ export async function POST(request: NextRequest) {
   let raw: Record<string, unknown>
   try {
     const contentType = request.headers.get("content-type") ?? ""
+    console.log("[/api/leads] content-type:", contentType)
     if (contentType.includes("application/x-www-form-urlencoded")) {
       const text = await request.text()
       const params = new URLSearchParams(text)
@@ -61,7 +62,9 @@ export async function POST(request: NextRequest) {
     } else {
       raw = await request.json()
     }
-  } catch {
+    console.log("[/api/leads] raw body keys:", Object.keys(raw))
+  } catch (err) {
+    console.error("[/api/leads] body parse error:", err)
     return NextResponse.json(
       { error: "invalid_body" },
       { status: 400, headers: { ...cors, "Cache-Control": "no-store" } },
@@ -69,6 +72,7 @@ export async function POST(request: NextRequest) {
   }
 
   const { nombre, email, empresa, cargo, mensaje } = parseFields(raw)
+  console.log("[/api/leads] mapped fields:", { nombre, email: email ? "[present]" : "[missing]", empresa, cargo, mensaje: mensaje ? "[present]" : "[missing]" })
   const missing = (
     [
       ["nombre", nombre],
@@ -91,6 +95,7 @@ export async function POST(request: NextRequest) {
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
 
+  console.log("[/api/leads] forwarding to CRM:", `${crmUrl}/api/public/leads/register`)
   let upstream: Response
   try {
     upstream = await fetch(`${crmUrl}/api/public/leads/register`, {
@@ -113,6 +118,7 @@ export async function POST(request: NextRequest) {
   }
 
   const responseBody = await upstream.text()
+  console.log("[/api/leads] CRM response:", upstream.status, responseBody.slice(0, 200))
   return new NextResponse(responseBody, {
     status: upstream.status,
     headers: {
