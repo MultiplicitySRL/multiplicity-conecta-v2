@@ -55,6 +55,9 @@ export async function POST(request: NextRequest) {
       const text = await request.text()
       const params = new URLSearchParams(text)
       raw = Object.fromEntries(params.entries())
+    } else if (contentType.includes("multipart/form-data")) {
+      const formData = await request.formData()
+      raw = Object.fromEntries(formData.entries())
     } else {
       raw = await request.json()
     }
