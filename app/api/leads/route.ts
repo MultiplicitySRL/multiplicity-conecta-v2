@@ -4,8 +4,6 @@ export const dynamic = "force-dynamic"
 export const revalidate = 0
 export const runtime = "nodejs"
 
-const N8N_RECEIVE_LEAD_URL =
-  "https://n8n.srv1464241.hstgr.cloud/webhook/receive-lead"
 const REQUEST_TIMEOUT_MS = 20_000
 
 function corsHeaders(request: NextRequest): HeadersInit {
@@ -25,58 +23,101 @@ function corsHeaders(request: NextRequest): HeadersInit {
   return headers
 }
 
-/**
- * POST /api/leads
- * Recibe el body de un formulario externo y lo reenvía por POST al webhook de n8n.
- * Al cliente siempre responde JSON genérico (no reexpone la respuesta de n8n).
- */
+function parseFields(data: Record<string, unknown>) {
+  const str = (v: unknown) =>
+    typeof v === "string" ? v.trim() : ""
+  return {
+    nombre: str(data["your-name"]),
+    email: str(data["your-email"]),
+    empresa: str(data["text-924"]),
+    cargo: str(data["text-879"]),
+    mensaje: str(data["your-message"]),
+  }
+}
+
 export async function POST(request: NextRequest) {
   const cors = corsHeaders(request)
 
-  try {
-    const incomingType =
-      request.headers.get("content-type") ?? "application/json"
-    const bodyBuffer = await request.arrayBuffer()
-
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
-
-    let upstream: Response
-    try {
-      upstream = await fetch(N8N_RECEIVE_LEAD_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": incomingType,
-        },
-        body: bodyBuffer.byteLength > 0 ? bodyBuffer : undefined,
-        signal: controller.signal,
-      })
-    } finally {
-      clearTimeout(timeoutId)
-    }
-
-    await upstream.text().catch(() => undefined)
-    if (!upstream.ok) {
-      console.error("/api/leads: n8n respondió con error", upstream.status)
-    }
-
+  const crmUrl = process.env.NEXT_PUBLIC_CRM_API_URL
+  const token = process.env.WEBHOOK_TOKEN
+  if (!crmUrl || !token) {
+    console.error("/api/leads: CRM env vars not configured")
     return NextResponse.json(
-      { success: true, message: "ok" },
-      {
-        status: 200,
-        headers: { ...cors, "Cache-Control": "no-store" },
-      },
-    )
-  } catch (err: unknown) {
-    console.error("/api/leads:", err)
-    return NextResponse.json(
-      { success: false, message: "Error temporal" },
-      {
-        status: 503,
-        headers: { ...cors, "Cache-Control": "no-store" },
-      },
+      { error: "server_error" },
+      { status: 500, headers: { ...cors, "Cache-Control": "no-store" } },
     )
   }
+
+  let raw: Record<string, unknown>
+  try {
+    const contentType = request.headers.get("content-type") ?? ""
+    if (contentType.includes("application/x-www-form-urlencoded")) {
+      const text = await request.text()
+      const params = new URLSearchParams(text)
+      raw = Object.fromEntries(params.entries())
+    } else {
+      raw = await request.json()
+    }
+  } catch {
+    return NextResponse.json(
+      { error: "invalid_body" },
+      { status: 400, headers: { ...cors, "Cache-Control": "no-store" } },
+    )
+  }
+
+  const { nombre, email, empresa, cargo, mensaje } = parseFields(raw)
+  const missing = (
+    [
+      ["nombre", nombre],
+      ["email", email],
+      ["empresa", empresa],
+      ["cargo", cargo],
+      ["mensaje", mensaje],
+    ] as [string, string][]
+  )
+    .filter(([, v]) => !v)
+    .map(([k]) => k)
+
+  if (missing.length > 0) {
+    return NextResponse.json(
+      { error: "missing_fields", required: missing },
+      { status: 400, headers: { ...cors, "Cache-Control": "no-store" } },
+    )
+  }
+
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+
+  let upstream: Response
+  try {
+    upstream = await fetch(`${crmUrl}/api/public/leads/register`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ nombre, email, empresa, cargo, mensaje }),
+      signal: controller.signal,
+    })
+  } catch (err) {
+    console.error("/api/leads: upstream fetch error", err)
+    return NextResponse.json(
+      { error: "upstream_error" },
+      { status: 502, headers: { ...cors, "Cache-Control": "no-store" } },
+    )
+  } finally {
+    clearTimeout(timeoutId)
+  }
+
+  const responseBody = await upstream.text()
+  return new NextResponse(responseBody, {
+    status: upstream.status,
+    headers: {
+      ...cors,
+      "Content-Type": "application/json",
+      "Cache-Control": "no-store",
+    },
+  })
 }
 
 export async function OPTIONS(request: NextRequest) {
