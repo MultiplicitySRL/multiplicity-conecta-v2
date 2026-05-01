@@ -1,9 +1,9 @@
 // ── Negocio / fiscal ─────────────────────────────────────────────────────────
 
-export const ITBIS_RATE = 0.18
+export const ITBIS_RATE = 0.18;
 
-export const EXCHANGE_RATE_USD_DOP = 59.7426
-export const EXCHANGE_RATE_EUR_REF =   69.1899
+export const EXCHANGE_RATE_USD_DOP = 60.1015;
+export const EXCHANGE_RATE_EUR_REF = 69.3592;
 
 export const BASE_PRICES = {
   competenciaPlus: 37.5,
@@ -11,7 +11,7 @@ export const BASE_PRICES = {
   motivadores: 22.5,
   competenciasBasicas: 8.0,
   razonamientoGeneral: 1.0,
-} as const
+} as const;
 
 export const PRICING_TIERS = {
   razonamientoGeneral: [
@@ -60,11 +60,11 @@ export const PRICING_TIERS = {
     { limit: 1500, price: 22.5 },
     { limit: 99999, price: 20.625 },
   ],
-} as const
+} as const;
 
 // ── Alegra ────────────────────────────────────────────────────────────────────
 
-export const ALEGRA_BASE_URL = "https://api.alegra.com/api/v1"
+export const ALEGRA_BASE_URL = "https://api.alegra.com/api/v1";
 
 export const TEST_NAMES = {
   competenciaPlus: "Test Competencias Plus",
@@ -72,7 +72,7 @@ export const TEST_NAMES = {
   motivadores: "Test Motivadores",
   competenciasBasicas: "Test Competencias Básicas",
   razonamientoGeneral: "Test Razonamiento General",
-} as const
+} as const;
 
 export const ALEGRA_TEST_IDS: Record<string, number> = {
   "Test Competencias Plus": 140,
@@ -80,20 +80,25 @@ export const ALEGRA_TEST_IDS: Record<string, number> = {
   "Test Motivadores": 142,
   "Test Competencias Básicas": 143,
   "Test Razonamiento General": 144,
-}
+};
 
-export const ALEGRA_ITBIS_TAX_ID = "1"
-export const ALEGRA_DEFAULT_INVOICE_STATUS = "draft"
-export const ALEGRA_DEFAULT_EMAIL_MESSAGE = "¡Hola! Te compartimos tu factura. Gracias por su compra."
+export const ALEGRA_ITBIS_TAX_ID = "1";
+export const ALEGRA_DEFAULT_INVOICE_STATUS = "draft";
+export const ALEGRA_DEFAULT_EMAIL_MESSAGE =
+  "¡Hola! Te compartimos tu factura. Gracias por su compra.";
 
 export const NCF_TIPO_ID: Record<string, string> = {
   "Crédito Fiscal": "22",
-  "Consumo": "17",
+  Consumo: "17",
   "Régimen Especial de Tributación": "23",
-  "Gubernamental": "24",
-}
+  Gubernamental: "24",
+};
 
-export const NCF_ALLOWED_LOCAL = ["Crédito Fiscal", "Gubernamental", "Régimen Especial de Tributación"] as const
+export const NCF_ALLOWED_LOCAL = [
+  "Crédito Fiscal",
+  "Gubernamental",
+  "Régimen Especial de Tributación",
+] as const;
 
 // ── Empresa (datos fiscales Multiplicity) ─────────────────────────────────────
 
@@ -105,9 +110,9 @@ export const COMPANY = {
   city: "Santo Domingo, Rep. Dominicana",
   phone: "809-565-0747",
   email: "info@multiplicity.com.do",
-} as const
+} as const;
 
 // ── Tipos derivados ───────────────────────────────────────────────────────────
 
-export type TestKey = keyof typeof BASE_PRICES
-export type TipoNCF = keyof typeof NCF_TIPO_ID
+export type TestKey = keyof typeof BASE_PRICES;
+export type TipoNCF = keyof typeof NCF_TIPO_ID;
