@@ -102,7 +102,7 @@ function CotizarPorPruebasContent() {
   console.log("companyId", companyId)
   console.log("account", account)
   console.log(Object.fromEntries(searchParams))
-
+console.log("clinet", clientInfo)
   useEffect(() => {
     if (!companyId) return
     const controller = new AbortController()
