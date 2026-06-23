@@ -1,37 +1,11 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
-import Image from "next/image"
-import { AccessRequestForm } from "@/components/access-request-form"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { UserContext, type UserInfo } from "@/lib/user-context"
-import { Loader2 } from "lucide-react"
 import { verifyAccessToken, type LeadUserInfo } from "@/lib/services/leads"
 import { trackProposalOpened } from "@/lib/services/tracking"
-
-const STORAGE_KEY = "multiplicity_access"
-const TOKEN_TTL_MS = 48 * 60 * 60 * 1000 // 2 días
-
-interface StoredAccess {
-  token: string
-  grantedAt: number
-  user: UserInfo
-}
-
-function getStoredAccess(): StoredAccess | null {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return null
-    const parsed: StoredAccess = JSON.parse(raw)
-    if (Date.now() - parsed.grantedAt > TOKEN_TTL_MS) {
-      localStorage.removeItem(STORAGE_KEY)
-      return null
-    }
-    return parsed
-  } catch {
-    return null
-  }
-}
+import { getStoredAccess, saveAccess } from "@/lib/access"
 
 function parseUserFromResponse(data: LeadUserInfo): UserInfo {
   return {
@@ -43,130 +17,62 @@ function parseUserFromResponse(data: LeadUserInfo): UserInfo {
   }
 }
 
-function saveAccess(token: string, user: UserInfo) {
-  const data: StoredAccess = { token, grantedAt: Date.now(), user }
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
-}
-
-type AccessState = "loading" | "granted" | "denied"
-
 interface AccessGateProps {
   children: React.ReactNode
 }
 
+/**
+ * Proveedor de identidad NO bloqueante.
+ *
+ * El contenido de la página es público: este componente NUNCA bloquea ni
+ * difumina el contenido. Su única responsabilidad es:
+ *  - Hidratar `UserContext` desde el registro guardado (`lib/access`) si existe.
+ *  - Si llega `?token=` (enlace del correo de bienvenida), verificarlo,
+ *    guardarlo y limpiar la URL — sin sacar al usuario de la página actual.
+ *
+ * El estado "registrado" (ver `lib/access`) lo consumen los gates de
+ * Reportes / Demo / Cotización.
+ */
 export function AccessGate({ children }: AccessGateProps) {
   const router = useRouter()
+  const pathname = usePathname()
   const searchParams = useSearchParams()
-  const [accessState, setAccessState] = useState<AccessState>("loading")
   const [user, setUser] = useState<UserInfo | null>(null)
 
   useEffect(() => {
     const urlToken = searchParams.get("token")
 
-    const verify = async () => {
-      if (urlToken) {
-        try {
-          const data = await verifyAccessToken(urlToken)
+    if (urlToken) {
+      verifyAccessToken(urlToken)
+        .then((data) => {
           const userInfo = parseUserFromResponse(data)
           saveAccess(urlToken, userInfo)
           trackProposalOpened(urlToken).catch(console.error)
           setUser(userInfo)
-          router.replace("/")
-          setAccessState("granted")
-        } catch {
-          setAccessState("denied")
-        }
-        return
-      }
-
-      // Sin token en URL: revisar localStorage
-      const stored = getStoredAccess()
-      if (stored) {
-        // Mostrar acceso inmediatamente con datos en caché
-        setUser(stored.user)
-        setAccessState("granted")
-
-        // Refrescar datos en segundo plano sin bloquear la UI
-        verifyAccessToken(stored.token)
-          .then((data) => {
-            const freshUser = parseUserFromResponse(data)
-            saveAccess(stored.token, freshUser)
-            setUser(freshUser)
-          })
-          .catch(() => {})
-      } else {
-        setAccessState("denied")
-      }
+          // Limpia el token de la URL conservando la ruta actual (/ o /cotizar)
+          router.replace(pathname)
+        })
+        .catch(() => {
+          // Token inválido/expirado: el contenido sigue siendo público.
+        })
+      return
     }
 
-    verify()
+    // Sin token en la URL: hidratar identidad desde el registro guardado.
+    const stored = getStoredAccess()
+    if (stored) {
+      setUser(stored.user)
+      // Refrescar datos en segundo plano sin bloquear la UI.
+      verifyAccessToken(stored.token)
+        .then((data) => {
+          const freshUser = parseUserFromResponse(data)
+          saveAccess(stored.token, freshUser)
+          setUser(freshUser)
+        })
+        .catch(() => {})
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  if (accessState === "loading") {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-10 w-10 animate-spin text-[#E11383]" />
-          <p className="text-sm text-muted-foreground">Verificando acceso...</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (accessState === "granted") {
-    return (
-      <UserContext.Provider value={user}>
-        {children}
-      </UserContext.Provider>
-    )
-  }
-
-  // Estado "denied": contenido borroso + overlay con formulario
-  return (
-    <div className="relative min-h-screen overflow-hidden">
-      {/* Contenido de fondo borroso */}
-      <div
-        className="pointer-events-none select-none"
-        style={{ filter: "blur(8px)", userSelect: "none" }}
-        aria-hidden="true"
-      >
-        {children}
-      </div>
-
-      {/* Overlay de acceso */}
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-        <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden">
-          {/* Header */}
-          <div className="px-6 pt-7 pb-4 text-center">
-            <div className="flex justify-center mb-5">
-              <Image
-                src="/images/multiplicity-logo.png"
-                alt="Multiplicity Logo"
-                width={200}
-                height={60}
-                className="object-contain"
-                priority
-              />
-            </div>
-            <h2 className="text-xl font-bold text-gray-900 mb-2">
-              ¡Bienvenido a Multiplicity!
-            </h2>
-            <p className="text-base text-gray-600 leading-relaxed">
-              Para continuar, déjanos tus datos y te enviaremos un{" "}
-              <span className="text-[#E11383] font-semibold">enlace personalizado</span>{" "}
-              a tu correo en minutos.
-            </p>
-          </div>
-
-          <div className="h-px bg-gray-100 mx-6" />
-
-          {/* Formulario */}
-          <div className="px-6 py-5">
-            <AccessRequestForm compact />
-          </div>
-        </div>
-      </div>
-    </div>
-  )
+  return <UserContext.Provider value={user}>{children}</UserContext.Provider>
 }

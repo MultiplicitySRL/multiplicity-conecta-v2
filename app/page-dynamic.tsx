@@ -12,13 +12,14 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog"
 import Image from "next/image"
 import Link from "next/link"
 import { Footer } from "@/components/footer"
 import { AccessGate } from "@/components/access-gate"
-import { useUser } from "@/lib/user-context"
+import { AccessRequestForm } from "@/components/access-request-form"
+import { RegisterGateDialog } from "@/components/register-gate-dialog"
+import { isRegistered, saveAccess } from "@/lib/access"
 import { trackDemoRequested } from "@/lib/services/tracking"
 import type { LandingItem } from "@/lib/landing-cms"
 import { isLandingSection, getSectionItems, getSectionHeader } from "@/lib/landing-cms"
@@ -390,6 +391,20 @@ function DynamicReportsSection({ header, items }: { header?: LandingItem; items:
   const basicItem = items.find((i) => i.subseccion === "Reporte Individual Básico")
   const grupalItem = items.find((i) => i.subseccion === "Reporte Grupal")
 
+  // Gate de Reportes: ver/abrir los informes de muestra requiere registro.
+  const [reportGateOpen, setReportGateOpen] = useState(false)
+  const [pendingReportUrl, setPendingReportUrl] = useState<string | null>(null)
+
+  const openReport = (url?: string | null) => {
+    if (!url) return
+    if (isRegistered()) {
+      window.open(url, "_blank")
+    } else {
+      setPendingReportUrl(url)
+      setReportGateOpen(true)
+    }
+  }
+
   const getCardBg = (color: string) => {
     if (color === "teal") return "#00A99D"
     if (color === "orange") return "#F15A24"
@@ -410,7 +425,7 @@ function DynamicReportsSection({ header, items }: { header?: LandingItem; items:
           {/* Video Card */}
           {videoItem && (
             <Card
-              onClick={() => videoItem.url_archivo && window.open(videoItem.url_archivo, "_blank")}
+              onClick={() => openReport(videoItem.url_archivo)}
               className="group overflow-hidden rounded-3xl hover:shadow-xl transition-all duration-300 border-0 cursor-pointer lg:row-span-2 flex flex-col p-0 gap-0"
             >
               <div className="relative w-full h-72 lg:h-[calc(100%-6rem)] overflow-hidden flex-shrink-0">
@@ -442,7 +457,7 @@ function DynamicReportsSection({ header, items }: { header?: LandingItem; items:
                     key={report.id}
                     className="group text-white p-4 shadow-md hover:shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer border-0"
                     style={{ borderRadius: "16px", backgroundColor: getCardBg(report.color) }}
-                    onClick={() => report.url_archivo && window.open(report.url_archivo, "_blank")}
+                    onClick={() => openReport(report.url_archivo)}
                   >
                     <div className="flex items-start gap-4 justify-between">
                       <div className="flex items-start gap-4 flex-1">
@@ -469,7 +484,7 @@ function DynamicReportsSection({ header, items }: { header?: LandingItem; items:
                 <Card
                   className="group text-white p-4 shadow-md hover:shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer border-0"
                   style={{ borderRadius: "16px", backgroundColor: getCardBg(basicItem.color) }}
-                  onClick={() => basicItem.url_archivo && window.open(basicItem.url_archivo, "_blank")}
+                  onClick={() => openReport(basicItem.url_archivo)}
                 >
                   <div className="flex items-start gap-4 justify-between">
                     <div className="flex items-start gap-4 flex-1">
@@ -493,7 +508,7 @@ function DynamicReportsSection({ header, items }: { header?: LandingItem; items:
                 <Card
                   className="group text-white p-4 shadow-md hover:shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer border-0"
                   style={{ borderRadius: "16px", backgroundColor: getCardBg(grupalItem.color) }}
-                  onClick={() => grupalItem.url_archivo && window.open(grupalItem.url_archivo, "_blank")}
+                  onClick={() => openReport(grupalItem.url_archivo)}
                 >
                   <div className="flex items-start gap-4 justify-between">
                     <div className="flex items-start gap-4 flex-1">
@@ -510,6 +525,17 @@ function DynamicReportsSection({ header, items }: { header?: LandingItem; items:
           </div>
         </div>
       </div>
+
+      <RegisterGateDialog
+        open={reportGateOpen}
+        onOpenChange={setReportGateOpen}
+        title="Regístrate para ver los reportes"
+        description=""
+        ctaLabel="Abrir reporte"
+        onRegistered={() => {
+          if (pendingReportUrl) window.open(pendingReportUrl, "_blank")
+        }}
+      />
     </section>
   )
 }
@@ -524,13 +550,13 @@ interface Participant {
 }
 
 function DynamicDemoSection({ header, items }: { header?: LandingItem; items: LandingItem[] }) {
-  const user = useUser()
   const [participants, setParticipants] = useState<Participant[]>([
     { nombre: "", apellido: "", posicion: "", email: "" },
   ])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
   const [isSubmitted, setIsSubmitted] = useState(false)
+  const [demoGateOpen, setDemoGateOpen] = useState(false)
 
   const steps = items.filter((i) => i.tipo === "Decorativo")
   const stepIcons = [Users, BarChart3, Calendar]
@@ -578,6 +604,12 @@ function DynamicDemoSection({ header, items }: { header?: LandingItem; items: La
     }, 300)
   }
 
+  // Gate de registro: solicitar demo requiere registro (el envío usa el token).
+  const handleDemoClick = () => {
+    if (isRegistered()) setIsOpen(true)
+    else setDemoGateOpen(true)
+  }
+
   return (
     <section id="demo" className="py-20 px-4 md:px-8 lg:px-16 bg-gradient-to-br from-[#4A1A4F] to-[#E11383]">
       <div className="max-w-7xl mx-auto">
@@ -614,15 +646,23 @@ function DynamicDemoSection({ header, items }: { header?: LandingItem; items: La
               </div>
             )}
 
+            <RegisterGateDialog
+              open={demoGateOpen}
+              onOpenChange={setDemoGateOpen}
+              title="Regístrate para solicitar tu demo"
+              description="Déjanos tus datos y continúa con la solicitud de demo."
+              ctaLabel="Continuar con el demo"
+              onRegistered={() => setIsOpen(true)}
+            />
+
             <Dialog open={isOpen} onOpenChange={setIsOpen}>
-              <DialogTrigger asChild>
-                <Button
-                  size="lg"
-                  className="w-full sm:w-auto bg-white text-[#b630b6] hover:bg-white/90 font-bold text-lg px-12 py-6 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
-                >
-                  {header?.texto_boton || "Solicitar demo"}
-                </Button>
-              </DialogTrigger>
+              <Button
+                size="lg"
+                onClick={handleDemoClick}
+                className="w-full sm:w-auto bg-white text-[#b630b6] hover:bg-white/90 font-bold text-lg px-12 py-6 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+              >
+                {header?.texto_boton || "Solicitar demo"}
+              </Button>
 
               <DialogContent className="!max-w-[1400px] !w-[90vw] max-h-[90vh] overflow-y-auto p-0">
                 {isSubmitted ? (
@@ -851,6 +891,71 @@ function DynamicFooter({ emailItem }: { emailItem?: LandingItem }) {
   )
 }
 
+// ─── Registration Section (captura al final de la landing) ────────────────────
+
+function DynamicRegistrationSection() {
+  const [registered, setRegistered] = useState(false)
+
+  useEffect(() => {
+    setRegistered(isRegistered())
+  }, [])
+
+  return (
+    <section
+      id="registro"
+      className="relative overflow-hidden py-20 px-4 md:px-8 lg:px-16 bg-gradient-to-br from-[#2d1340] via-[#4A1A4F] to-[#E11383]"
+    >
+      {/* Blobs decorativos */}
+      <div className="pointer-events-none absolute -top-24 -right-24 w-80 h-80 rounded-full bg-white/10 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-24 -left-24 w-80 h-80 rounded-full bg-[#00BCB4]/20 blur-3xl" />
+
+      <div className="relative max-w-7xl mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+          {/* Columna izquierda: copy inspirador */}
+          <div className="text-white space-y-6">
+            <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight text-balance">
+              Descubre cómo Multiplicity puede potenciar a tu equipo
+            </h2>
+
+            <p className="text-lg md:text-xl text-white/90 text-pretty max-w-xl">
+              Déjanos tus datos y te mostramos cómo encontrar, desarrollar y aprovechar todo el
+              potencial de tu gente.
+            </p>
+          </div>
+
+          {/* Columna derecha: tarjeta con el formulario */}
+          <div className="lg:pl-4">
+            {registered ? (
+              <div className="flex flex-col items-center gap-4 rounded-3xl bg-white p-8 md:p-10 text-center shadow-2xl">
+                <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center">
+                  <CheckCircle2 className="h-9 w-9 text-green-600" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900">¡Ya estás registrado!</h3>
+                <p className="text-gray-600 max-w-sm">
+                  Gracias por tu interés. Explora el contenido y solicita tu demo o cotización
+                  cuando quieras.
+                </p>
+              </div>
+            ) : (
+              <div className="rounded-3xl bg-white p-6 md:p-8 shadow-2xl">
+                <div className="mb-5">
+                  <h3 className="text-2xl font-bold text-gray-900">Déjanos tus datos</h3>
+                </div>
+                <AccessRequestForm
+                  onSuccess={({ accessToken, user }) => {
+                    if (accessToken) saveAccess(accessToken, user)
+                    setRegistered(true)
+                  }}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function HomePageDynamic() {
@@ -907,6 +1012,7 @@ export default function HomePageDynamic() {
         <DynamicReportsSection header={reportsHeader} items={reportsItems} />
         <DynamicDemoSection header={demoHeader} items={demoItems} />
         <DynamicBookingSection item={bookingItem} />
+        <DynamicRegistrationSection />
         <DynamicFooter emailItem={footerEmailItem} />
       </main>
     </AccessGate>

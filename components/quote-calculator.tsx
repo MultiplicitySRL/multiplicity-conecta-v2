@@ -10,7 +10,8 @@ import { Users, Sparkles, CheckCircle2, Loader2, Building2, Globe } from "lucide
 import ScenarioCard from "./scenario-card"
 import ObservationsSection from "./observations-section"
 import Image from "next/image"
-import { useUser } from "@/lib/user-context"
+import { getStoredAccess, isRegistered } from "@/lib/access"
+import { RegisterGateDialog } from "@/components/register-gate-dialog"
 import { submitProspectQuote } from "@/lib/services/quotes"
 import { trackProposalAccepted } from "@/lib/services/tracking"
 import { BASE_PRICES, PRICING_TIERS, ITBIS_RATE, EXCHANGE_RATE_USD_DOP, EXCHANGE_RATE_EUR_REF } from "@/lib/config"
@@ -75,7 +76,7 @@ export default function QuoteCalculator({
   exchangeRateUSD = EXCHANGE_RATE_USD_DOP,
   exchangeRateEUR = EXCHANGE_RATE_EUR_REF,
 }: QuoteCalculatorProps = {}) {
-  const user = useUser()
+  const [showRegister, setShowRegister] = useState(false)
   const [currentStep, setCurrentStep] = useState(1)
   const [directivos, setDirectivos] = useState("")
   const [profesionales, setProfesionales] = useState("")
@@ -187,20 +188,23 @@ export default function QuoteCalculator({
     }
   }, [isSubmitted])
 
-  const handleConsultQuote = async () => {
-    if (!hasData || !companyType) return
-
-    console.log("[v0] Clearing selected scenario, current value:", selectedScenario)
+  const generateQuote = async () => {
     setSelectedScenario(null)
-    console.log("[v0] Selected scenario cleared")
-
     setIsLoading(true)
     await new Promise((resolve) => setTimeout(resolve, 2000))
     setIsLoading(false)
     setCurrentStep(2)
-
     setRegenerationCount((prev) => prev + 1)
-    console.log("[v0] Regeneration count incremented")
+  }
+
+  const handleConsultQuote = async () => {
+    if (!hasData || !companyType) return
+    // Gate de registro reubicado: se requiere registro para generar la cotización.
+    if (!isRegistered()) {
+      setShowRegister(true)
+      return
+    }
+    await generateQuote()
   }
 
   const handleSelectScenario = (scenarioId: number) => {
@@ -209,6 +213,7 @@ export default function QuoteCalculator({
   }
 
   const handleFormComplete = async (payload: Record<string, unknown>) => {
+    const access = getStoredAccess()
     const fullPayload = {
       ...payload,
       directivos: directivos || "0",
@@ -217,15 +222,14 @@ export default function QuoteCalculator({
       companyType,
       currency,
       totalPersonnel,
-      empresa_id: user?.empresa || "",
-      responsable_id: user?.id || "",
-      responsable_nombre: user?.nombre || "",
-      responsable_email: user?.email || "",
+      empresa_id: access?.user.empresa || "",
+      responsable_id: access?.user.id || "",
+      responsable_nombre: access?.user.nombre || "",
+      responsable_email: access?.user.email || "",
     }
     try {
       await submitProspectQuote(fullPayload)
-      const storedRaw = localStorage.getItem("multiplicity_access")
-      const token: string = storedRaw ? (JSON.parse(storedRaw) as { token: string }).token : ""
+      const token = access?.token ?? ""
       if (token) trackProposalAccepted(token).catch(console.error)
     } catch (_e) {
       // Opcional: mostrar toast de error
@@ -287,6 +291,17 @@ export default function QuoteCalculator({
 
   return (
     <div className="space-y-4 max-w-[1600px] mx-auto">
+      <RegisterGateDialog
+        open={showRegister}
+        onOpenChange={setShowRegister}
+        title="Regístrate para ver tu cotización"
+        description="Déjanos tus datos y generamos tu cotización personalizada."
+        ctaLabel="Ver mi cotización"
+        onRegistered={() => {
+          void generateQuote()
+        }}
+      />
+
       {/* STEP 1: Input personnel data */}
       <div ref={step1Ref} className="relative">
         {currentStep >= 2 && (

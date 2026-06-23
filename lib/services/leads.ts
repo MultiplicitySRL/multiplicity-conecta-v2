@@ -14,7 +14,12 @@ export interface LeadUserInfo {
   empresa: string;
 }
 
-export async function registerLead(input: RegisterLeadInput): Promise<void> {
+export interface RegisterLeadResult {
+  leadId: string | null;
+  accessToken: string | null;
+}
+
+export async function registerLead(input: RegisterLeadInput): Promise<RegisterLeadResult> {
   const res = await fetch("/api/leads/register", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -24,6 +29,8 @@ export async function registerLead(input: RegisterLeadInput): Promise<void> {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.error ?? "register_failed");
   }
+  const data = await res.json().catch(() => ({}));
+  return { leadId: data.leadId ?? null, accessToken: data.accessToken ?? null };
 }
 
 export async function verifyAccessToken(token: string): Promise<LeadUserInfo> {

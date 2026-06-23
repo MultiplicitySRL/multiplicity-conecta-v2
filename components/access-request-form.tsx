@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { CheckCircle2, Loader2, AlertCircle } from "lucide-react"
 import { registerLead } from "@/lib/services/leads"
+import type { UserInfo } from "@/lib/user-context"
 
 const BLOCKED_DOMAINS = [
   "gmail.com", "googlemail.com",
@@ -36,9 +37,16 @@ type FormState = "idle" | "submitting" | "success" | "error"
 
 interface AccessRequestFormProps {
   compact?: boolean
+  /**
+   * Si se provee, al registrarse con éxito se llama con el resultado (incluye
+   * el access token) en vez de mostrar la pantalla de éxito interna. El padre
+   * decide qué hacer (guardar acceso, continuar la acción, etc.).
+   */
+  onSuccess?: (result: { leadId: string | null; accessToken: string | null; user: UserInfo }) => void
+  submitLabel?: string
 }
 
-export function AccessRequestForm({ compact = false }: AccessRequestFormProps) {
+export function AccessRequestForm({ compact = false, onSuccess, submitLabel = "Enviar correo" }: AccessRequestFormProps) {
   const [formState, setFormState] = useState<FormState>("idle")
 
   const {
@@ -50,7 +58,18 @@ export function AccessRequestForm({ compact = false }: AccessRequestFormProps) {
   const onSubmit = async (data: FormValues) => {
     setFormState("submitting")
     try {
-      await registerLead(data)
+      const result = await registerLead(data)
+      if (onSuccess) {
+        const user: UserInfo = {
+          id: result.leadId ?? "",
+          nombre: data.nombre,
+          email: data.email,
+          cargo: data.cargo,
+          empresa: data.empresa,
+        }
+        onSuccess({ ...result, user })
+        return
+      }
       setFormState("success")
     } catch {
       setFormState("error")
@@ -164,7 +183,7 @@ export function AccessRequestForm({ compact = false }: AccessRequestFormProps) {
             Enviando...
           </>
         ) : (
-          "Enviar correo"
+          submitLabel
         )}
       </Button>
     </form>
