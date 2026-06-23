@@ -2,8 +2,8 @@
 
 export const ITBIS_RATE = 0.18;
 
-export const EXCHANGE_RATE_USD_DOP = 58.7048;
-export const EXCHANGE_RATE_EUR_REF =  67.3427;
+export const EXCHANGE_RATE_USD_DOP = 58.8956;
+export const EXCHANGE_RATE_EUR_REF = 66.5667;
 
 export const BASE_PRICES = {
   competenciaPlus: 37.5,
