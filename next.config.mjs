@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // EC2 (Misión EC2): servidor autónomo en .next/standalone.
+  output: "standalone",
+  poweredByHeader: false,
   typescript: {
     ignoreBuildErrors: true,
   },

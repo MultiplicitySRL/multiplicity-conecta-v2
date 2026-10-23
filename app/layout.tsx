@@ -26,7 +26,8 @@ export default function RootLayout({
     <html lang="es">
       <body className={`${poppins.variable} font-sans antialiased`}>
         {children}
-        <Analytics />
+        {/* Vercel Analytics solo existe en Vercel; en el EC2 daría 404 en cada página. */}
+        {process.env.VERCEL ? <Analytics /> : null}
         <ChatwootWidget />
       </body>
     </html>

@@ -374,14 +374,10 @@ Total: ${formatCurrencyForNotes(calculations.total, calculations.symbol)}`
         alegraInvoicePayload,
       }
 
-      const crmUrl = process.env.NEXT_PUBLIC_CRM_API_URL ?? ""
-      const webhookToken = process.env.NEXT_PUBLIC_FRONTEND_WEBHOOK_TOKEN ?? ""
-      const response = await fetch(`${crmUrl}/api/invoice-requests`, {
+      // Va por el servidor del sitio (/api/invoice-requests), que agrega el token: nunca llega al navegador.
+      const response = await fetch("/api/invoice-requests", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(webhookToken ? { Authorization: `Bearer ${webhookToken}` } : {}),
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(fullPayload),
       })
 

@@ -386,7 +386,8 @@ function DynamicBusinessModelSection({ header, items }: { header?: LandingItem; 
 // ─── Reports Section ─────────────────────────────────────────────────────────
 
 function DynamicReportsSection({ header, items }: { header?: LandingItem; items: LandingItem[] }) {
-  const videoItem = items.find((i) => i.orden === 31)
+  // El video de Reportes es la fila 31; si se moviera, la que no tiene subsección (Misión Admin Único).
+  const videoItem = items.find((i) => i.orden === 31) ?? items.find((i) => !i.subseccion)
   const plusItems = items.filter((i) => i.subseccion === "Reportes Individuales Plus")
   const basicItem = items.find((i) => i.subseccion === "Reporte Individual Básico")
   const grupalItem = items.find((i) => i.subseccion === "Reporte Grupal")
@@ -895,6 +896,7 @@ function DynamicFooter({ emailItem }: { emailItem?: LandingItem }) {
 
 function DynamicRegistrationSection() {
   const [registered, setRegistered] = useState(false)
+  const [registeredByEmail, setRegisteredByEmail] = useState(false)
 
   useEffect(() => {
     setRegistered(isRegistered())
@@ -930,10 +932,13 @@ function DynamicRegistrationSection() {
                 <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center">
                   <CheckCircle2 className="h-9 w-9 text-green-600" />
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900">¡Ya estás registrado!</h3>
+                <h3 className="text-2xl font-bold text-gray-900">
+                  {registeredByEmail ? "¡Revisa tu correo!" : "¡Ya estás registrado!"}
+                </h3>
                 <p className="text-gray-600 max-w-sm">
-                  Gracias por tu interés. Explora el contenido y solicita tu demo o cotización
-                  cuando quieras.
+                  {registeredByEmail
+                    ? "Te enviamos un correo con los pasos para acceder al contenido."
+                    : "Gracias por tu interés. Explora el contenido y solicita tu demo o cotización cuando quieras."}
                 </p>
               </div>
             ) : (
@@ -944,6 +949,7 @@ function DynamicRegistrationSection() {
                 <AccessRequestForm
                   onSuccess={({ accessToken, user }) => {
                     if (accessToken) saveAccess(accessToken, user)
+                    setRegisteredByEmail(!accessToken)
                     setRegistered(true)
                   }}
                 />

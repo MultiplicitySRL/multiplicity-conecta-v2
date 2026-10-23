@@ -87,6 +87,10 @@ function CotizarPorPruebasContent() {
   const companyId = searchParams.get("company_id")
   const account = searchParams.get("account")
   const invoiceClientId = companyId ?? account
+  // Firma del enlace de Assess (exp + sig), si viene: el servidor del sitio la exige cuando ASSESS_LINK_SECRET existe.
+  const linkExp = searchParams.get("exp")
+  const linkSig = searchParams.get("sig")
+  const linkAuth = linkExp && linkSig ? `&exp=${encodeURIComponent(linkExp)}&sig=${encodeURIComponent(linkSig)}` : ""
 
   const [clientInfo, setClientInfo] = useState<AlegraClientInfo | null>(null)
   const [isLoadingClientInfo, setIsLoadingClientInfo] = useState(false)
@@ -107,7 +111,7 @@ console.log("clinet", clientInfo)
     if (!companyId) return
     const controller = new AbortController()
     setIsLoadingClientInfo(true)
-    fetch(`/api/alegra/client?client_id=${encodeURIComponent(companyId)}`, { method: "GET", signal: controller.signal })
+    fetch(`/api/alegra/client?client_id=${encodeURIComponent(companyId)}${linkAuth}`, { method: "GET", signal: controller.signal })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data) {
@@ -123,7 +127,7 @@ console.log("clinet", clientInfo)
       .catch((err) => { if (err?.name !== "AbortError") setIsLoadingClientInfo(false) })
       .finally(() => setIsLoadingClientInfo(false))
     return () => controller.abort()
-  }, [companyId])
+  }, [companyId, linkAuth])
 
   const fetchInvoices = useCallback(async (signal?: AbortSignal) => {
     if (!invoiceClientId) return
@@ -131,7 +135,7 @@ console.log("clinet", clientInfo)
       setIsLoadingInvoices(true)
       setInvoicesError(null)
 
-      const res = await fetch(`/api/alegra/invoices?client_id=${encodeURIComponent(invoiceClientId)}`, {
+      const res = await fetch(`/api/alegra/invoices?client_id=${encodeURIComponent(invoiceClientId)}${linkAuth}`, {
         method: "GET",
         signal,
       })
@@ -159,7 +163,7 @@ console.log("clinet", clientInfo)
     } finally {
       setIsLoadingInvoices(false)
     }
-  }, [invoiceClientId])
+  }, [invoiceClientId, linkAuth])
 
   useEffect(() => {
     if (!invoiceClientId) return

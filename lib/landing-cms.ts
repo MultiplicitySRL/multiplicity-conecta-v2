@@ -1,3 +1,5 @@
+import { fetchCmsCsv } from "./cms-source"
+
 /**
  * Landing CMS - Contenido dinámico de la página principal
  * Mismo patrón que resources-cms-v3.ts
@@ -20,8 +22,6 @@ export interface LandingItem {
   color: string
 }
 
-const LANDING_CSV_URL =
-  "https://werhxhxexqboowzutevv.supabase.co/functions/v1/prospecto-csv"
 
 /**
  * Parse CSV a array de LandingItem (RFC 4180: soporta campos entrecomillados con saltos de línea)
@@ -134,31 +134,9 @@ function parseLandingCSV(csv: string): LandingItem[] {
  * Sin caché - siempre carga datos frescos
  */
 export async function fetchLandingData(): Promise<LandingItem[]> {
-  const csvUrl = LANDING_CSV_URL
-
-  if (!csvUrl) {
-    console.error("LANDING_CSV_URL no configurada")
-    return []
-  }
-
   try {
-    const separator = csvUrl.includes("?") ? "&" : "?"
-    const url = `${csvUrl}${separator}_=${Date.now()}`
-
-    const response = await fetch(url, {
-      cache: "no-store",
-      next: { revalidate: 0 },
-      headers: {
-        "Cache-Control": "no-store, no-cache, must-revalidate",
-        Pragma: "no-cache",
-      },
-    })
-
-    if (!response.ok) {
-      throw new Error(`Error fetching landing data: ${response.status}`)
-    }
-
-    const csv = await response.text()
+    // Origen configurable (CMS_FUNCTIONS_BASE_URL), timeout y último contenido bueno: lib/cms-source.ts
+    const csv = await fetchCmsCsv("prospecto-csv")
     const items = parseLandingCSV(csv)
 
     return items.sort((a, b) => a.orden - b.orden)

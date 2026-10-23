@@ -43,6 +43,7 @@ export function RegisterGateDialog({
   onRegistered,
 }: RegisterGateDialogProps) {
   const [done, setDone] = useState(false)
+  const [byEmail, setByEmail] = useState(false)
 
   const handleOpenChange = (next: boolean) => {
     if (!next) setDone(false)
@@ -63,16 +64,29 @@ export function RegisterGateDialog({
             <div className="bg-green-100 rounded-full p-4">
               <CheckCircle2 className="h-10 w-10 text-green-600" />
             </div>
-            <h3 className="text-xl font-bold text-gray-900">¡Registro completado!</h3>
+            <h3 className="text-xl font-bold text-gray-900">
+              {byEmail ? "¡Revisa tu correo!" : "¡Registro completado!"}
+            </h3>
             <p className="text-gray-600 max-w-sm">
-              Ya tienes acceso. Continúa para ver el contenido.
+              {byEmail
+                ? "Te enviamos un correo con los pasos para acceder al contenido."
+                : "Ya tienes acceso. Continúa para ver el contenido."}
             </p>
-            <Button
-              onClick={handleProceed}
-              className="w-full bg-[#E11383] hover:bg-[#c40f72] text-white"
-            >
-              {ctaLabel}
-            </Button>
+            {byEmail ? (
+              <Button
+                onClick={() => handleOpenChange(false)}
+                className="w-full bg-[#E11383] hover:bg-[#c40f72] text-white"
+              >
+                Entendido
+              </Button>
+            ) : (
+              <Button
+                onClick={handleProceed}
+                className="w-full bg-[#E11383] hover:bg-[#c40f72] text-white"
+              >
+                {ctaLabel}
+              </Button>
+            )}
           </div>
         ) : (
           <>
@@ -96,6 +110,7 @@ export function RegisterGateDialog({
                 submitLabel="Registrarme"
                 onSuccess={({ accessToken, user }) => {
                   if (accessToken) saveAccess(accessToken, user)
+                  setByEmail(!accessToken)
                   setDone(true)
                 }}
               />

@@ -1,3 +1,5 @@
+import { fetchCmsCsv } from "./cms-source"
+
 /**
  * Cliente CMS V3 - Simplificado
  * Lee el nuevo formato de CSV optimizado para usuarios
@@ -36,8 +38,6 @@ export interface ResourceV3 {
   color: string // "azul", "rosa", o vacío
 }
 
-const GOOGLE_SHEET_CSV_URL =
-  "https://werhxhxexqboowzutevv.supabase.co/functions/v1/resources-csv"
 
 /**
  * Parse CSV V3 a array de objetos (RFC 4180: soporta campos entrecomillados con saltos de línea)
@@ -153,24 +153,8 @@ function parseCSVv3(csv: string): ResourceV3[] {
  */
 export async function fetchResourcesV3(): Promise<ResourceV3[]> {
   try {
-    // URL con cache-busting: cada petición es única (Next.js no puede cachear por URL)
-    const separator = GOOGLE_SHEET_CSV_URL.includes("?") ? "&" : "?"
-    const url = `${GOOGLE_SHEET_CSV_URL}${separator}_=${Date.now()}`
-
-    const response = await fetch(url, {
-      cache: "no-store",
-      next: { revalidate: 0 },
-      headers: {
-        "Cache-Control": "no-store, no-cache, must-revalidate",
-        Pragma: "no-cache",
-      },
-    })
-
-    if (!response.ok) {
-      throw new Error(`Error fetching resources: ${response.status}`)
-    }
-
-    const csv = await response.text()
+    // Origen configurable (CMS_FUNCTIONS_BASE_URL), timeout y último contenido bueno: lib/cms-source.ts
+    const csv = await fetchCmsCsv("resources-csv")
     const resources = parseCSVv3(csv)
 
     // Ordenar por campo orden

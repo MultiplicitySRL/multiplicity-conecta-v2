@@ -1,12 +1,26 @@
 import { NextRequest, NextResponse } from "next/server"
+import { verifyAssessLink } from "@/lib/assess-link"
 
 export const dynamic = "force-dynamic"
 export const runtime = "nodejs"
 
+// Solo lo que muestra /cotizar-por-pruebas: nunca el contacto completo de Alegra (RNC, dirección, teléfonos).
+type AlegraContact = {
+  id?: string | number
+  name?: string
+  email?: string | null
+  defaultInvoiceResolution?: unknown
+  address?: { country?: string | null } | null
+}
+
 export async function GET(request: NextRequest) {
-  const clientId = request.nextUrl.searchParams.get("client_id")
+  const params = request.nextUrl.searchParams
+  const clientId = params.get("client_id")
   if (!clientId) {
     return NextResponse.json({ error: "missing_client_id" }, { status: 400 })
+  }
+  if (!verifyAssessLink(clientId, params.get("exp"), params.get("sig"))) {
+    return NextResponse.json({ error: "invalid_signature" }, { status: 403 })
   }
 
   const crmUrl = process.env.NEXT_PUBLIC_CRM_API_URL
@@ -32,10 +46,17 @@ export async function GET(request: NextRequest) {
   if (!upstream) {
     return NextResponse.json({ error: "upstream_unavailable" }, { status: 503 })
   }
+  if (!upstream.ok) {
+    return NextResponse.json({ error: "upstream_error" }, { status: upstream.status })
+  }
 
-  const body = await upstream.text()
-  return new NextResponse(body, {
-    status: upstream.status,
-    headers: { "Content-Type": "application/json" },
+  const data = (await upstream.json().catch(() => null)) as AlegraContact | null
+  if (!data) return NextResponse.json(null)
+  return NextResponse.json({
+    id: data.id,
+    name: data.name,
+    email: data.email ?? null,
+    defaultInvoiceResolution: data.defaultInvoiceResolution ?? null,
+    address: { country: data.address?.country ?? null },
   })
 }
