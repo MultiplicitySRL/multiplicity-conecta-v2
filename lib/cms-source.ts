@@ -3,14 +3,13 @@
 // Dos orígenes, el mismo CSV y el mismo parser:
 //   · EC2: CMS_REST_URL (PostgREST local, p. ej. http://127.0.0.1:3002) + CMS_REST_KEY (JWT del rol
 //     site_reader: solo lee los bloques visibles, sin notas internas). Tiene prioridad si está configurado.
-//   · Funciones CSV: CMS_FUNCTIONS_BASE_URL; sin variable, las de siempre (blue-yachts2).
+//   · Funciones CSV: CMS_FUNCTIONS_BASE_URL (opcional, sin valor por defecto: Supabase se va a apagar).
 // Todas las variables son solo de servidor (nunca NEXT_PUBLIC_).
 //
 // Si el origen falla o tarda más de 8 s, se usa el último CSV bueno que este servidor recibió,
 // en vez de dejar la página vacía.
 import { buildCmsCsv, CMS_CSV_COLUMNS, type CmsCsvRow } from "./cms-csv"
 
-const DEFAULT_BASE = "https://werhxhxexqboowzutevv.supabase.co/functions/v1"
 const TIMEOUT_MS = 8000
 
 type CmsFunction = "resources-csv" | "prospecto-csv"
@@ -23,7 +22,8 @@ const TABLE: Record<CmsFunction, string> = {
 const lastGood = new Map<CmsFunction, string>()
 
 export function cmsFunctionUrl(name: CmsFunction): string {
-  const base = (process.env.CMS_FUNCTIONS_BASE_URL || DEFAULT_BASE).replace(/\/+$/, "")
+  const base = process.env.CMS_FUNCTIONS_BASE_URL?.replace(/\/+$/, "")
+  if (!base) throw new Error("Falta CMS_REST_URL + CMS_REST_KEY (o CMS_FUNCTIONS_BASE_URL)")
   return `${base}/${name}`
 }
 

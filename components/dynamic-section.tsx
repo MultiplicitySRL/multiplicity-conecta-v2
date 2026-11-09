@@ -95,7 +95,35 @@ export function DynamicSection({ title, subtitle, resources, backgroundColor = "
               }
               return blocks.map((block, blockIndex) => (
                 <div key={blockIndex} className="space-y-6">
-                  {block.large && (
+                  {/* Sin archivo no es un recurso: se muestra como título del grupo, no como tarjeta. */}
+                  {block.large && !block.large.url_archivo?.trim() && (
+                    <div
+                      id={`resource-${block.large.id}`}
+                      data-card-id={`resource-${block.large.id}`}
+                      className="relative flex items-center min-h-[148px] overflow-hidden rounded-2xl bg-[#1c0a44] px-6 md:px-8 py-6"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={getImageSrc(block.large)}
+                        alt=""
+                        aria-hidden="true"
+                        className="absolute inset-y-0 right-0 h-full w-full md:w-[62%] object-cover object-[50%_66%] md:object-[50%_61%]"
+                        onError={(e) => {
+                          e.currentTarget.style.display = "none"
+                        }}
+                        crossOrigin={block.large.imagen?.startsWith("http") ? "anonymous" : undefined}
+                      />
+                      <div
+                        aria-hidden="true"
+                        className="absolute inset-0 bg-[#1c0a44]/80 md:bg-transparent md:bg-gradient-to-r md:from-[#1c0a44] md:from-[42%] md:to-transparent md:to-[78%]"
+                      />
+                      <h3 className="relative text-2xl md:text-[2rem] font-bold leading-tight text-white">
+                        {block.large.titulo.trim().split(/\s+/).slice(0, -1).join(" ")}{" "}
+                        <span className="text-[#ff4fb0]">{block.large.titulo.trim().split(/\s+/).slice(-1)[0]}</span>
+                      </h3>
+                    </div>
+                  )}
+                  {block.large && !!block.large.url_archivo?.trim() && (
                     <Card
                       id={`resource-${block.large.id}`}
                       data-card-id={`resource-${block.large.id}`}
